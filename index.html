@@ -7,6 +7,19 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; background: #f6f7fb; }
+    .toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+    .toolbar label { font-weight: 600; }
+    #monthSelect { padding: 6px 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 14px; }
+    #monthBadge {
+      display: none;
+      padding: 4px 12px;
+      border-radius: 999px;
+      background: #e8f5e9;
+      color: #2e7d32;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    #monthBadge.visible { display: inline-block; }
     .card { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.06); margin-bottom: 12px; }
     #status { color: #555; margin-bottom: 8px; }
     #lastSuccess { color: #2e7d32; margin-bottom: 8px; }
@@ -20,14 +33,21 @@
 </head>
 <body>
   <h2>Дашборд сфер жизни</h2>
+
+  <div class="toolbar">
+    <label for="monthSelect">Месяц</label>
+    <select id="monthSelect" aria-label="Выбор месяца"></select>
+    <span id="monthBadge" class="visible">Текущий месяц</span>
+  </div>
+
   <div id="status">Загрузка...</div>
   <div id="lastSuccess"></div>
   <div id="kpi"></div>
   <div id="progressList"></div>
 
   <div class="row">
-    <button id="downloadBar">Скачать PNG (Факт vs Цель)</button>
-    <button id="downloadRadar">Скачать PNG (Колесо баланса)</button>
+    <button id="downloadBar" type="button">Скачать PNG (Факт vs Цель)</button>
+    <button id="downloadRadar" type="button">Скачать PNG (Колесо баланса)</button>
   </div>
 
   <div class="card">
@@ -48,8 +68,57 @@
   <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbxPt1g2a8KWgbb82tRaLDfH4mkP7u6kRJIjM3ovdyls47oIW0KhEdsfY6DnhIg9ckDp/exec";
 
+    const MONTH_OPTIONS = [
+      { key: "2026-05", label: "Май 2026" },
+      { key: "2026-04", label: "Апрель 2026" },
+      { key: "2026-03", label: "Март 2026" },
+      { key: "2026-02", label: "Февраль 2026" },
+      { key: "2026-01", label: "Январь 2026" },
+      // { key: "2026-06", label: "Июнь 2026" },
+    ];
+
     let barChart = null;
     let radarChart = null;
+
+    function currentMonthKey() {
+      const d = new Date();
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      return `${y}-${m}`;
+    }
+
+    function buildMonthUI() {
+      const sel = document.getElementById("monthSelect");
+      sel.innerHTML = MONTH_OPTIONS.map(
+        (o) => `<option value="${o.key}">${o.label}</option>`
+      ).join("");
+
+      const cm = currentMonthKey();
+      const hasCurrent = MONTH_OPTIONS.some((o) => o.key === cm);
+      if (hasCurrent) sel.value = cm;
+      else if (MONTH_OPTIONS.length) sel.value = MONTH_OPTIONS[0].key;
+
+      sel.addEventListener("change", () => {
+        updateMonthBadge();
+        loadData();
+      });
+      updateMonthBadge();
+    }
+
+    function updateMonthBadge() {
+      const key = document.getElementById("monthSelect").value;
+      const badge = document.getElementById("monthBadge");
+      const isCurrent = key === currentMonthKey();
+      badge.classList.toggle("visible", isCurrent);
+      badge.textContent = "Текущий месяц";
+    }
+
+    function apiUrlForMonth() {
+      const key = document.getElementById("monthSelect").value;
+      const base = API_URL.split("?")[0];
+      const sep = base.includes("?") ? "&" : "?";
+      return `${base}${sep}month=${encodeURIComponent(key)}`;
+    }
 
     function getProgressColor(p) {
       if (p >= 100) return "#2e7d32";
@@ -89,26 +158,29 @@
       const key = "life_dashboard_api_errors";
       const arr = JSON.parse(localStorage.getItem(key) || "[]");
       const el = document.getElementById("errorLog");
-      el.innerHTML = arr.length ? arr.map(x => `• ${x}`).join("<br>") : "Ошибок пока нет";
+      el.innerHTML = arr.length ? arr.map((x) => `• ${x}`).join("<br>") : "Ошибок пока нет";
     }
 
-    function renderProgress(rows) {
+    function renderProgress(rows, monthLabel) {
       const totalFact = rows.reduce((s, r) => s + (Number(r.fact) || 0), 0);
       const totalGoal = rows.reduce((s, r) => s + (Number(r.goal) || 0), 0);
       const totalPercent = totalGoal > 0 ? Math.round((totalFact / totalGoal) * 100) : 0;
 
       const kpi = document.getElementById("kpi");
-      kpi.textContent = `Общий прогресс: ${totalFact}/${totalGoal} (${totalPercent}%)`;
+      const suffix = monthLabel ? ` (${monthLabel})` : "";
+      kpi.textContent = `Общий прогресс${suffix}: ${totalFact}/${totalGoal} (${totalPercent}%)`;
       kpi.style.color = getProgressColor(totalPercent);
 
       const list = document.getElementById("progressList");
-      list.innerHTML = rows.map(r => {
-        const p = Number(r.progress) || 0;
-        const color = getProgressColor(p);
-        return `<div style="border:1px solid ${color}; color:${color}; border-radius:999px; padding:6px 10px; font-size:13px; background:#fff;">
+      list.innerHTML = rows
+        .map((r) => {
+          const p = Number(r.progress) || 0;
+          const color = getProgressColor(p);
+          return `<div style="border:1px solid ${color}; color:${color}; border-radius:999px; padding:6px 10px; font-size:13px; background:#fff;">
           ${r.sphere}: ${r.fact}/${r.goal} (${p}%)
         </div>`;
-      }).join("");
+        })
+        .join("");
     }
 
     async function loadData() {
@@ -116,19 +188,25 @@
 
       try {
         statusEl.textContent = "Запрос к API...";
-        const res = await fetch(API_URL, { cache: "no-store" });
+        const url = apiUrlForMonth();
+        const res = await fetch(url, { cache: "no-store" });
         const data = await res.json();
 
         if (!data.ok || !Array.isArray(data.rows)) {
-          throw new Error("Неверный формат API (ожидаю { ok:true, rows:[...] })");
+          const msg = data.error || "Неверный ответ API";
+          throw new Error(msg);
         }
 
         const rows = data.rows;
-        renderProgress(rows);
+        const sel = document.getElementById("monthSelect");
+        const opt = MONTH_OPTIONS.find((o) => o.key === sel.value);
+        const monthLabel = opt ? opt.label : data.month || sel.value;
 
-        const labels = rows.map(r => r.sphere);
-        const fact = rows.map(r => Number(r.fact) || 0);
-        const goal = rows.map(r => Number(r.goal) || 0);
+        renderProgress(rows, monthLabel);
+
+        const labels = rows.map((r) => r.sphere);
+        const fact = rows.map((r) => Number(r.fact) || 0);
+        const goal = rows.map((r) => Number(r.goal) || 0);
 
         if (barChart) barChart.destroy();
         barChart = new Chart(document.getElementById("barChart"), {
@@ -137,13 +215,13 @@
             labels,
             datasets: [
               { label: "Факт", data: fact, backgroundColor: "#4e79a7" },
-              { label: "Цель", data: goal, backgroundColor: "#f28e2b" }
-            ]
+              { label: "Цель", data: goal, backgroundColor: "#f28e2b" },
+            ],
           },
-          options: { responsive: true }
+          options: { responsive: true },
         });
 
-        const ratio = rows.map(r => {
+        const ratio = rows.map((r) => {
           const f = Number(r.fact) || 0;
           const g = Number(r.goal) || 0;
           return g > 0 ? Math.min(f / g, 1) : 0;
@@ -154,24 +232,29 @@
           type: "radar",
           data: {
             labels,
-            datasets: [{
-              label: "Факт/Цель",
-              data: ratio,
-              fill: true,
-              backgroundColor: "rgba(78,121,167,0.2)",
-              borderColor: "#4e79a7",
-              pointBackgroundColor: "#4e79a7"
-            }]
+            datasets: [
+              {
+                label: "Факт/Цель",
+                data: ratio,
+                fill: true,
+                backgroundColor: "rgba(78,121,167,0.2)",
+                borderColor: "#4e79a7",
+                pointBackgroundColor: "#4e79a7",
+              },
+            ],
           },
           options: {
             responsive: true,
             scales: {
-              r: { min: 0, max: 1, ticks: { stepSize: 0.2 } }
-            }
-          }
+              r: { min: 0, max: 1, ticks: { stepSize: 0.2 } },
+            },
+          },
         });
 
-        statusEl.textContent = "Обновлено: " + new Date().toLocaleTimeString();
+        statusEl.textContent =
+          "Обновлено: " +
+          new Date().toLocaleTimeString() +
+          (data.month ? ` · вкладка ${data.month}` : "");
         saveLastSuccess();
       } catch (e) {
         statusEl.textContent = "Ошибка API: " + e.message;
@@ -188,6 +271,7 @@
       downloadCanvas("radarChart", "balance-wheel.png");
     });
 
+    buildMonthUI();
     renderLastSuccess();
     renderErrorLog();
     loadData();
