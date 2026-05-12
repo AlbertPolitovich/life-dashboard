@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Дашборд сфер жизни</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f6f7fb; }
+    .card { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.06); margin-bottom: 12px; }
+    #status { color: #555; margin-bottom: 8px; }
+    #lastSuccess { color: #2e7d32; margin-bottom: 8px; }
+    #kpi { font-weight: 700; margin-bottom: 10px; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    #progressList { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+    button { border: 0; background: #222; color: #fff; padding: 8px 12px; border-radius: 8px; cursor: pointer; }
+    button:hover { opacity: .9; }
+    #errorLog { font-size: 14px; color: #c62828; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <h2>Дашборд сфер жизни</h2>
+  <div id="status">Загрузка...</div>
+  <div id="lastSuccess"></div>
+  <div id="kpi"></div>
+  <div id="progressList"></div>
+
+  <div class="row">
+    <button id="downloadBar">Скачать PNG (Факт vs Цель)</button>
+    <button id="downloadRadar">Скачать PNG (Колесо баланса)</button>
+  </div>
+
+  <div class="card">
+    <h3>Факт vs Цель</h3>
+    <canvas id="barChart"></canvas>
+  </div>
+
+  <div class="card">
+    <h3>Radar chart (факт/цель, 0..1)</h3>
+    <canvas id="radarChart"></canvas>
+  </div>
+
+  <div class="card">
+    <h3>История ошибок API (локально)</h3>
+    <div id="errorLog">Ошибок пока нет</div>
+  </div>
+
+  <script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbxPt1g2a8KWgbb82tRaLDfH4mkP7u6kRJIjM3ovdyls47oIW0KhEdsfY6DnhIg9ckDp/exec";
+
+    let barChart = null;
+    let radarChart = null;
+
+    function getProgressColor(p) {
+      if (p >= 100) return "#2e7d32";
+      if (p >= 50) return "#f9a825";
+      return "#c62828";
+    }
+
+    function downloadCanvas(canvasId, fileName) {
+      const canvas = document.getElementById(canvasId);
+      const link = document.createElement("a");
+      link.href = canvas.toDataURL("image/png");
+      link.download = fileName;
+      link.click();
+    }
+
+    function saveLastSuccess() {
+      const ts = new Date().toLocaleString();
+      localStorage.setItem("life_dashboard_last_success", ts);
+      renderLastSuccess();
+    }
+
+    function renderLastSuccess() {
+      const ts = localStorage.getItem("life_dashboard_last_success");
+      const el = document.getElementById("lastSuccess");
+      el.textContent = ts ? `Последнее успешное обновление: ${ts}` : "";
+    }
+
+    function saveErrorLog(message) {
+      const key = "life_dashboard_api_errors";
+      const arr = JSON.parse(localStorage.getItem(key) || "[]");
+      arr.unshift(`${new Date().toLocaleString()} — ${message}`);
+      localStorage.setItem(key, JSON.stringify(arr.slice(0, 10)));
+      renderErrorLog();
+    }
+
+    function renderErrorLog() {
+      const key = "life_dashboard_api_errors";
+      const arr = JSON.parse(localStorage.getItem(key) || "[]");
+      const el = document.getElementById("errorLog");
+      el.innerHTML = arr.length ? arr.map(x => `• ${x}`).join("<br>") : "Ошибок пока нет";
+    }
+
+    function renderProgress(rows) {
+      const totalFact = rows.reduce((s, r) => s + (Number(r.fact) || 0), 0);
+      const totalGoal = rows.reduce((s, r) => s + (Number(r.goal) || 0), 0);
+      const totalPercent = totalGoal > 0 ? Math.round((totalFact / totalGoal) * 100) : 0;
+
+      const kpi = document.getElementById("kpi");
+      kpi.textContent = `Общий прогресс: ${totalFact}/${totalGoal} (${totalPercent}%)`;
+      kpi.style.color = getProgressColor(totalPercent);
+
+      const list = document.getElementById("progressList");
+      list.innerHTML = rows.map(r => {
+        const p = Number(r.progress) || 0;
+        const color = getProgressColor(p);
+        return `<div style="border:1px solid ${color}; color:${color}; border-radius:999px; padding:6px 10px; font-size:13px; background:#fff;">
+          ${r.sphere}: ${r.fact}/${r.goal} (${p}%)
+        </div>`;
+      }).join("");
+    }
+
+    async function loadData() {
+      const statusEl = document.getElementById("status");
+
+      try {
+        statusEl.textContent = "Запрос к API...";
+        const res = await fetch(API_URL, { cache: "no-store" });
+        const data = await res.json();
+
+        if (!data.ok || !Array.isArray(data.rows)) {
+          throw new Error("Неверный формат API (ожидаю { ok:true, rows:[...] })");
+        }
+
+        const rows = data.rows;
+        renderProgress(rows);
+
+        const labels = rows.map(r => r.sphere);
+        const fact = rows.map(r => Number(r.fact) || 0);
+        const goal = rows.map(r => Number(r.goal) || 0);
+
+        if (barChart) barChart.destroy();
+        barChart = new Chart(document.getElementById("barChart"), {
+          type: "bar",
+          data: {
+            labels,
+            datasets: [
+              { label: "Факт", data: fact, backgroundColor: "#4e79a7" },
+              { label: "Цель", data: goal, backgroundColor: "#f28e2b" }
+            ]
+          },
+          options: { responsive: true }
+        });
+
+        const ratio = rows.map(r => {
+          const f = Number(r.fact) || 0;
+          const g = Number(r.goal) || 0;
+          return g > 0 ? Math.min(f / g, 1) : 0;
+        });
+
+        if (radarChart) radarChart.destroy();
+        radarChart = new Chart(document.getElementById("radarChart"), {
+          type: "radar",
+          data: {
+            labels,
+            datasets: [{
+              label: "Факт/Цель",
+              data: ratio,
+              fill: true,
+              backgroundColor: "rgba(78,121,167,0.2)",
+              borderColor: "#4e79a7",
+              pointBackgroundColor: "#4e79a7"
+            }]
+          },
+          options: {
+            responsive: true,
+            scales: {
+              r: { min: 0, max: 1, ticks: { stepSize: 0.2 } }
+            }
+          }
+        });
+
+        statusEl.textContent = "Обновлено: " + new Date().toLocaleTimeString();
+        saveLastSuccess();
+      } catch (e) {
+        statusEl.textContent = "Ошибка API: " + e.message;
+        console.error(e);
+        saveErrorLog(e.message);
+      }
+    }
+
+    document.getElementById("downloadBar").addEventListener("click", () => {
+      downloadCanvas("barChart", "fact-vs-goal.png");
+    });
+
+    document.getElementById("downloadRadar").addEventListener("click", () => {
+      downloadCanvas("radarChart", "balance-wheel.png");
+    });
+
+    renderLastSuccess();
+    renderErrorLog();
+    loadData();
+    setInterval(loadData, 30000);
+  </script>
+</body>
+</html>
