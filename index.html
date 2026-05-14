@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Дашборд сфер жизни</title>
+  <title>Routine/Sport</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; background: #f6f7fb; }
@@ -24,15 +24,62 @@
     #status { color: #555; margin-bottom: 8px; }
     #lastSuccess { color: #2e7d32; margin-bottom: 8px; }
     #kpi { font-weight: 700; margin-bottom: 10px; }
-    .row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
-    #progressList { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
-    button { border: 0; background: #222; color: #fff; padding: 8px 12px; border-radius: 8px; cursor: pointer; }
-    button:hover { opacity: .9; }
-    #errorLog { font-size: 14px; color: #c62828; line-height: 1.5; }
+    #progressList { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    .split-50 {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      align-items: flex-start;
+    }
+    .col-routine, .col-sport {
+      flex: 1 1 calc(50% - 10px);
+      min-width: 240px;
+    }
+    .col-routine h3, .col-sport h3 { margin-top: 0; }
+    .donut-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px 12px;
+      justify-content: flex-start;
+      margin-top: 4px;
+    }
+    .donut-cell {
+      width: 92px;
+      text-align: center;
+    }
+    .donut-cell .donut-canvas-wrap {
+      height: 88px;
+      margin: 0 auto 6px;
+      position: relative;
+    }
+    .donut-cell canvas { max-width: 100%; max-height: 100%; }
+    .donut-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: #333;
+      line-height: 1.25;
+      word-break: break-word;
+    }
+    .donut-stat {
+      font-size: 11px;
+      color: #666;
+      margin-top: 2px;
+    }
+    .radar-row { display: flex; align-items: flex-start; }
+    .radar-chart-host {
+      width: 50%;
+      max-width: 380px;
+      min-width: 0;
+    }
+    .radar-spacer { flex: 1; min-width: 0; }
+    @media (max-width: 640px) {
+      .col-routine, .col-sport { flex: 1 1 100%; }
+      .radar-chart-host { width: 100%; max-width: 100%; }
+    }
   </style>
 </head>
 <body>
-  <h2>Дашборд сфер жизни</h2>
+  <h2>Routine/Sport</h2>
 
   <div class="toolbar">
     <label for="monthSelect">Месяц</label>
@@ -40,29 +87,33 @@
     <span id="monthBadge" class="visible">Текущий месяц</span>
   </div>
 
-  <div id="status">Загрузка...</div>
+  <div id="status"></div>
   <div id="lastSuccess"></div>
-  <div id="kpi"></div>
-  <div id="progressList"></div>
 
-  <div class="row">
-    <button id="downloadBar" type="button">Скачать PNG (Факт vs Цель)</button>
-    <button id="downloadRadar" type="button">Скачать PNG (Колесо баланса)</button>
+  <div class="card card-routine-sport">
+    <div class="split-50">
+      <div class="col-routine">
+        <h3>Routine</h3>
+        <div id="kpi"></div>
+        <div id="progressList"></div>
+        <div id="sphereDonuts" class="donut-grid" aria-label="Прогресс по сферам"></div>
+      </div>
+      <div class="col-sport">
+        <h3>Sport</h3>
+        <div id="sportKpi"></div>
+        <div id="sportDonuts" class="donut-grid" aria-label="Прогресс по спорту"></div>
+      </div>
+    </div>
   </div>
 
   <div class="card">
-    <h3>Факт vs Цель</h3>
-    <canvas id="barChart"></canvas>
-  </div>
-
-  <div class="card">
-    <h3>Radar chart (факт/цель, 0..1)</h3>
-    <canvas id="radarChart"></canvas>
-  </div>
-
-  <div class="card">
-    <h3>История ошибок API (локально)</h3>
-    <div id="errorLog">Ошибок пока нет</div>
+    <h3>Radar chart</h3>
+    <div class="radar-row">
+      <div class="radar-chart-host">
+        <canvas id="radarChart"></canvas>
+      </div>
+      <div class="radar-spacer" aria-hidden="true"></div>
+    </div>
   </div>
 
   <script>
@@ -77,8 +128,20 @@
       // { key: "2026-06", label: "Июнь 2026" },
     ];
 
-    let barChart = null;
+    const sphereDonutCharts = [];
+    const sportDonutCharts = [];
     let radarChart = null;
+
+    function destroyChartList(list) {
+      while (list.length) {
+        const c = list.pop();
+        try {
+          c.destroy();
+        } catch (err) {
+          /* ignore */
+        }
+      }
+    }
 
     function currentMonthKey() {
       const d = new Date();
@@ -126,14 +189,6 @@
       return "#c62828";
     }
 
-    function downloadCanvas(canvasId, fileName) {
-      const canvas = document.getElementById(canvasId);
-      const link = document.createElement("a");
-      link.href = canvas.toDataURL("image/png");
-      link.download = fileName;
-      link.click();
-    }
-
     function saveLastSuccess() {
       const ts = new Date().toLocaleString();
       localStorage.setItem("life_dashboard_last_success", ts);
@@ -146,19 +201,155 @@
       el.textContent = ts ? `Последнее успешное обновление: ${ts}` : "";
     }
 
-    function saveErrorLog(message) {
-      const key = "life_dashboard_api_errors";
-      const arr = JSON.parse(localStorage.getItem(key) || "[]");
-      arr.unshift(`${new Date().toLocaleString()} — ${message}`);
-      localStorage.setItem(key, JSON.stringify(arr.slice(0, 10)));
-      renderErrorLog();
+    function donutDataForPercent(progressRaw) {
+      const pr = Number(progressRaw) || 0;
+      const arc = Math.min(Math.max(pr, 0), 100);
+      const colorKey = pr >= 100 ? 100 : pr;
+      const fill = getProgressColor(colorKey);
+      const track = "#eceff1";
+      return {
+        datasets: [
+          {
+            data: arc >= 100 ? [100, 0] : [arc, 100 - arc],
+            backgroundColor: [fill, track],
+            borderWidth: 0,
+            hoverOffset: 0,
+          },
+        ],
+      };
     }
 
-    function renderErrorLog() {
-      const key = "life_dashboard_api_errors";
-      const arr = JSON.parse(localStorage.getItem(key) || "[]");
-      const el = document.getElementById("errorLog");
-      el.innerHTML = arr.length ? arr.map((x) => `• ${x}`).join("<br>") : "Ошибок пока нет";
+    function miniDonutOptions() {
+      return {
+        type: "doughnut",
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          aspectRatio: 1,
+          cutout: "70%",
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              filter: (item) => item.dataIndex === 0,
+              callbacks: {
+                label(ctx) {
+                  const v = ctx.raw;
+                  return ` ${Math.round(v * 10) / 10}%`;
+                },
+              },
+            },
+          },
+        },
+      };
+    }
+
+    function renderSphereDonuts(rows) {
+      const host = document.getElementById("sphereDonuts");
+      destroyChartList(sphereDonutCharts);
+      host.innerHTML = "";
+
+      rows.forEach((r) => {
+        const pr = Number(r.progress) || 0;
+        const cell = document.createElement("div");
+        cell.className = "donut-cell";
+        const wrap = document.createElement("div");
+        wrap.className = "donut-canvas-wrap";
+        const cv = document.createElement("canvas");
+        cv.setAttribute("role", "img");
+        cv.setAttribute("aria-label", `${r.sphere}: ${r.fact}/${r.goal} (${pr}%)`);
+        wrap.appendChild(cv);
+        cell.appendChild(wrap);
+        const name = document.createElement("div");
+        name.className = "donut-name";
+        name.textContent = r.sphere;
+        cell.appendChild(name);
+        const st = document.createElement("div");
+        st.className = "donut-stat";
+        st.textContent = `${r.fact}/${r.goal} (${pr}%)`;
+        cell.appendChild(st);
+        host.appendChild(cell);
+
+        const chart = new Chart(cv, {
+          ...miniDonutOptions(),
+          data: donutDataForPercent(pr),
+        });
+        sphereDonutCharts.push(chart);
+      });
+    }
+
+    function renderSportDonuts(sport) {
+      const host = document.getElementById("sportDonuts");
+      destroyChartList(sportDonutCharts);
+      host.innerHTML = "";
+
+      if (!sport || typeof sport.totalMinutes !== "number") {
+        return;
+      }
+
+      const cols = Array.isArray(sport.byMinColumn) ? sport.byMinColumn : [];
+      cols.forEach((c) => {
+        const pr = Number(c.progress) || 0;
+        const m = Number(c.minutes) || 0;
+        const gPart = Number(c.goalPart) || 0;
+        const short =
+          (c.shortLabel && String(c.shortLabel).trim()) ||
+          String(c.label || "")
+            .replace(/, min$/i, "")
+            .trim();
+
+        const cell = document.createElement("div");
+        cell.className = "donut-cell";
+        const wrap = document.createElement("div");
+        wrap.className = "donut-canvas-wrap";
+        const cv = document.createElement("canvas");
+        cv.setAttribute("role", "img");
+        cv.setAttribute("aria-label", `${short}: ${m}/${gPart} мин (${pr}%)`);
+        wrap.appendChild(cv);
+        cell.appendChild(wrap);
+        const name = document.createElement("div");
+        name.className = "donut-name";
+        name.textContent = short;
+        cell.appendChild(name);
+        const st = document.createElement("div");
+        st.className = "donut-stat";
+        st.textContent = `${m}/${gPart} мин (${pr}%)`;
+        cell.appendChild(st);
+        host.appendChild(cell);
+
+        const chart = new Chart(cv, {
+          ...miniDonutOptions(),
+          data: donutDataForPercent(pr),
+        });
+        sportDonutCharts.push(chart);
+      });
+    }
+
+    function renderSport(sport) {
+      const kpiEl = document.getElementById("sportKpi");
+
+      if (!sport || typeof sport.totalMinutes !== "number") {
+        kpiEl.textContent = "Спорт: данных нет (ожидается объект sport в API).";
+        kpiEl.style.color = "#666";
+        destroyChartList(sportDonutCharts);
+        document.getElementById("sportDonuts").innerHTML = "";
+        return;
+      }
+
+      const goal = Number(sport.goalTotalMinutes != null ? sport.goalTotalMinutes : sport.goalMinutes) || 0;
+      const total = Number(sport.totalMinutes) || 0;
+      const pTotal =
+        typeof sport.progress === "number"
+          ? sport.progress
+          : goal > 0
+            ? Math.round((total / goal) * 1000) / 10
+            : 0;
+      const col = getProgressColor(pTotal);
+
+      const title = sport.monthTitle || "";
+      kpiEl.textContent = `Итог ${title}: ${total} / ${goal} (${pTotal}%)`;
+      kpiEl.style.color = col;
+
+      renderSportDonuts(sport);
     }
 
     function renderProgress(rows, monthLabel) {
@@ -181,6 +372,8 @@
         </div>`;
         })
         .join("");
+
+      renderSphereDonuts(rows);
     }
 
     async function loadData() {
@@ -205,22 +398,6 @@
         renderProgress(rows, monthLabel);
 
         const labels = rows.map((r) => r.sphere);
-        const fact = rows.map((r) => Number(r.fact) || 0);
-        const goal = rows.map((r) => Number(r.goal) || 0);
-
-        if (barChart) barChart.destroy();
-        barChart = new Chart(document.getElementById("barChart"), {
-          type: "bar",
-          data: {
-            labels,
-            datasets: [
-              { label: "Факт", data: fact, backgroundColor: "#4e79a7" },
-              { label: "Цель", data: goal, backgroundColor: "#f28e2b" },
-            ],
-          },
-          options: { responsive: true },
-        });
-
         const ratio = rows.map((r) => {
           const f = Number(r.fact) || 0;
           const g = Number(r.goal) || 0;
@@ -245,35 +422,41 @@
           },
           options: {
             responsive: true,
+            maintainAspectRatio: true,
+            aspectRatio: 1,
+            plugins: {
+              legend: { display: true, position: "bottom", labels: { boxWidth: 10, font: { size: 11 } } },
+            },
             scales: {
-              r: { min: 0, max: 1, ticks: { stepSize: 0.2 } },
+              r: {
+                min: 0,
+                max: 1,
+                ticks: { stepSize: 0.2, font: { size: 10 } },
+                pointLabels: { font: { size: 10 } },
+              },
             },
           },
         });
 
-        statusEl.textContent =
-          "Обновлено: " +
-          new Date().toLocaleTimeString() +
-          (data.month ? ` · вкладка ${data.month}` : "");
+        renderSport(data.sport);
+
+        statusEl.textContent = "";
         saveLastSuccess();
       } catch (e) {
         statusEl.textContent = "Ошибка API: " + e.message;
         console.error(e);
-        saveErrorLog(e.message);
+        destroyChartList(sphereDonutCharts);
+        document.getElementById("sphereDonuts").innerHTML = "";
+        renderSport(null);
+        if (radarChart) {
+          radarChart.destroy();
+          radarChart = null;
+        }
       }
     }
 
-    document.getElementById("downloadBar").addEventListener("click", () => {
-      downloadCanvas("barChart", "fact-vs-goal.png");
-    });
-
-    document.getElementById("downloadRadar").addEventListener("click", () => {
-      downloadCanvas("radarChart", "balance-wheel.png");
-    });
-
     buildMonthUI();
     renderLastSuccess();
-    renderErrorLog();
     loadData();
     setInterval(loadData, 30000);
   </script>
