@@ -23,8 +23,7 @@
     .card { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.06); margin-bottom: 12px; }
     #status { color: #555; margin-bottom: 8px; }
     #lastSuccess { color: #2e7d32; margin-bottom: 8px; }
-    #kpi { font-weight: 700; margin-bottom: 10px; }
-    #progressList { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    #kpi { font-weight: 700; margin-bottom: 12px; }
     .split-50 {
       display: flex;
       flex-wrap: wrap;
@@ -95,7 +94,6 @@
       <div class="col-routine">
         <h3>Routine</h3>
         <div id="kpi"></div>
-        <div id="progressList"></div>
         <div id="sphereDonuts" class="donut-grid" aria-label="Прогресс по сферам"></div>
       </div>
       <div class="col-sport">
@@ -361,17 +359,6 @@
       const suffix = monthLabel ? ` (${monthLabel})` : "";
       kpi.textContent = `Общий прогресс${suffix}: ${totalFact}/${totalGoal} (${totalPercent}%)`;
       kpi.style.color = getProgressColor(totalPercent);
-
-      const list = document.getElementById("progressList");
-      list.innerHTML = rows
-        .map((r) => {
-          const p = Number(r.progress) || 0;
-          const color = getProgressColor(p);
-          return `<div style="border:1px solid ${color}; color:${color}; border-radius:999px; padding:6px 10px; font-size:13px; background:#fff;">
-          ${r.sphere}: ${r.fact}/${r.goal} (${p}%)
-        </div>`;
-        })
-        .join("");
 
       renderSphereDonuts(rows);
     }
