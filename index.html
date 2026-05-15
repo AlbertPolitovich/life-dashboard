@@ -447,7 +447,12 @@
     function isExcludedTypePill(p) {
       const label = String(p.label || p.shortLabel || "").toLowerCase();
       const val = String(p.value || "");
-      return label.includes("pace") || /1899-12-30/.test(val);
+      return (
+        label.includes("pace") ||
+        /^wt\b/.test(label) ||
+        label.includes("вес") ||
+        /1899-12-30/.test(val)
+      );
     }
 
     function formatTypePillValue(p) {
@@ -475,10 +480,6 @@
       if (!map.hrCycling) {
         const p = find(/heart\s*rate\s*cycling|cycling.*avr|пульс.*вел/i);
         if (p) map.hrCycling = p;
-      }
-      if (!map.wt) {
-        const p = find(/^wt\b|вес/i);
-        if (p) map.wt = p;
       }
       return map;
     }
@@ -555,7 +556,6 @@
 
       if (cols[0]) appendTypeColumn(host, sportTypeDonutCharts, cols[0], pmap.hrRunning);
       if (cols[1]) appendTypeColumn(host, sportTypeDonutCharts, cols[1], pmap.hrCycling);
-      if (pmap.wt) appendTypeStatCard(host, pmap.wt);
     }
 
     function renderProgress(rows, monthLabel) {
