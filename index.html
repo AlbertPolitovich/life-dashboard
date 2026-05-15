@@ -68,14 +68,25 @@
       display: flex;
       flex-wrap: wrap;
       align-items: flex-end;
-      gap: 18px 20px;
+      gap: 18px 24px;
       margin-top: 4px;
     }
-    .type-metric-row .donut-cell {
+    .type-metric-column {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    .type-metric-column .donut-cell {
       width: 100px;
     }
-    .type-metric-row .donut-cell .donut-canvas-wrap {
+    .type-metric-column .donut-cell .donut-canvas-wrap {
       height: 96px;
+    }
+    .type-metric-column .type-stat-card {
+      min-width: 100px;
+      max-width: 140px;
+      padding: 12px 14px;
     }
     .type-stat-card {
       flex: 0 1 auto;
@@ -457,7 +468,7 @@
       return map;
     }
 
-    function appendTypeDonut(host, chartList, item) {
+    function appendTypeDonut(parent, chartList, item) {
       const pr = Number(item.progress) || 0;
       const f = Number(item.fact) || 0;
       const g = Number(item.goal) || 0;
@@ -483,7 +494,7 @@
       st.className = "donut-stat";
       st.textContent = statText;
       cell.appendChild(st);
-      host.appendChild(cell);
+      parent.appendChild(cell);
 
       chartList.push(
         new Chart(cv, {
@@ -491,6 +502,14 @@
           data: donutDataForPercent(pr),
         })
       );
+    }
+
+    function appendTypeColumn(host, chartList, item, pill) {
+      const col = document.createElement("div");
+      col.className = "type-metric-column";
+      appendTypeDonut(col, chartList, item);
+      if (pill) appendTypeStatCard(col, pill);
+      host.appendChild(col);
     }
 
     function appendTypeStatCard(host, pill) {
@@ -519,10 +538,8 @@
       const cols = sportByType.byTypeColumn;
       const pmap = pillMap_(sportByType.statPills);
 
-      if (cols[0]) appendTypeDonut(host, sportTypeDonutCharts, cols[0]);
-      if (pmap.hrRunning) appendTypeStatCard(host, pmap.hrRunning);
-      if (cols[1]) appendTypeDonut(host, sportTypeDonutCharts, cols[1]);
-      if (pmap.hrCycling) appendTypeStatCard(host, pmap.hrCycling);
+      if (cols[0]) appendTypeColumn(host, sportTypeDonutCharts, cols[0], pmap.hrRunning);
+      if (cols[1]) appendTypeColumn(host, sportTypeDonutCharts, cols[1], pmap.hrCycling);
       if (pmap.wt) appendTypeStatCard(host, pmap.wt);
     }
 
