@@ -30,11 +30,11 @@
       gap: 20px;
       align-items: flex-start;
     }
-    .col-routine, .col-sport {
+    .col-routine, .col-sport, .col-sport-type, .col-radar {
       flex: 1 1 calc(50% - 10px);
       min-width: 240px;
     }
-    .col-routine h3, .col-sport h3 { margin-top: 0; }
+    .col-routine h3, .col-sport h3, .col-sport-type h3, .col-radar h3 { margin-top: 0; }
     .donut-grid {
       display: flex;
       flex-wrap: wrap;
@@ -64,16 +64,51 @@
       color: #666;
       margin-top: 2px;
     }
-    .radar-row { display: flex; align-items: flex-start; }
+    .type-metric-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      gap: 18px 20px;
+      margin-top: 4px;
+    }
+    .type-metric-row .donut-cell {
+      width: 100px;
+    }
+    .type-metric-row .donut-cell .donut-canvas-wrap {
+      height: 96px;
+    }
+    .type-stat-card {
+      flex: 0 1 auto;
+      min-width: 118px;
+      max-width: 160px;
+      padding: 14px 18px;
+      border-radius: 16px;
+      text-align: center;
+      background: linear-gradient(145deg, #f8fafc 0%, #eef2f7 100%);
+      border: 1px solid #cfd8dc;
+      box-shadow: 0 2px 10px rgba(55, 71, 79, 0.08);
+    }
+    .type-stat-card .stat-value {
+      font-size: 32px;
+      font-weight: 700;
+      line-height: 1.1;
+      color: #263238;
+      letter-spacing: -0.02em;
+    }
+    .type-stat-card .stat-label {
+      margin-top: 8px;
+      font-size: 11px;
+      font-weight: 600;
+      line-height: 1.35;
+      color: #546e7a;
+    }
     .radar-chart-host {
-      width: 50%;
-      max-width: 380px;
+      width: 100%;
+      max-width: 100%;
       min-width: 0;
     }
-    .radar-spacer { flex: 1; min-width: 0; }
     @media (max-width: 640px) {
-      .col-routine, .col-sport { flex: 1 1 100%; }
-      .radar-chart-host { width: 100%; max-width: 100%; }
+      .col-routine, .col-sport, .col-sport-type, .col-radar { flex: 1 1 100%; }
     }
   </style>
 </head>
@@ -97,20 +132,25 @@
         <div id="sphereDonuts" class="donut-grid" aria-label="Прогресс по сферам"></div>
       </div>
       <div class="col-sport">
-        <h3>Sport</h3>
+        <h3>Sport by min</h3>
         <div id="sportKpi"></div>
         <div id="sportDonuts" class="donut-grid" aria-label="Прогресс по спорту"></div>
       </div>
     </div>
   </div>
 
-  <div class="card">
-    <h3>Radar chart</h3>
-    <div class="radar-row">
-      <div class="radar-chart-host">
-        <canvas id="radarChart"></canvas>
+  <div class="card card-type-radar">
+    <div class="split-50">
+      <div class="col-sport-type">
+        <h3>Sport by type</h3>
+        <div id="sportTypeRow" class="type-metric-row" aria-label="Спорт по типу"></div>
       </div>
-      <div class="radar-spacer" aria-hidden="true"></div>
+      <div class="col-radar">
+        <h3>Radar chart</h3>
+        <div class="radar-chart-host">
+          <canvas id="radarChart"></canvas>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -128,6 +168,7 @@
 
     const sphereDonutCharts = [];
     const sportDonutCharts = [];
+    const sportTypeDonutCharts = [];
     let radarChart = null;
 
     function destroyChartList(list) {
@@ -275,6 +316,48 @@
       });
     }
 
+    function renderDonutGrid(hostEl, chartList, items, opts) {
+      destroyChartList(chartList);
+      hostEl.innerHTML = "";
+
+      items.forEach((item) => {
+        const pr = Number(item.progress) || 0;
+        const name =
+          (item.shortLabel && String(item.shortLabel).trim()) ||
+          String(item.label || "").trim();
+        const statText =
+          typeof opts.statText === "function"
+            ? opts.statText(item)
+            : `${item.fact}/${item.goal} (${pr}%)`;
+
+        const cell = document.createElement("div");
+        cell.className = "donut-cell";
+        const wrap = document.createElement("div");
+        wrap.className = "donut-canvas-wrap";
+        const cv = document.createElement("canvas");
+        cv.setAttribute("role", "img");
+        cv.setAttribute("aria-label", `${name}: ${statText}`);
+        wrap.appendChild(cv);
+        cell.appendChild(wrap);
+        const nameEl = document.createElement("div");
+        nameEl.className = "donut-name";
+        nameEl.textContent = name;
+        cell.appendChild(nameEl);
+        const st = document.createElement("div");
+        st.className = "donut-stat";
+        st.textContent = statText;
+        cell.appendChild(st);
+        hostEl.appendChild(cell);
+
+        chartList.push(
+          new Chart(cv, {
+            ...miniDonutOptions(),
+            data: donutDataForPercent(pr),
+          })
+        );
+      });
+    }
+
     function renderSportDonuts(sport) {
       const host = document.getElementById("sportDonuts");
       destroyChartList(sportDonutCharts);
@@ -350,6 +433,99 @@
       renderSportDonuts(sport);
     }
 
+    function isExcludedTypePill(p) {
+      const label = String(p.label || p.shortLabel || "").toLowerCase();
+      const val = String(p.value || "");
+      return label.includes("pace") || /1899-12-30/.test(val);
+    }
+
+    function formatTypePillValue(p) {
+      let v = p.value != null ? String(p.value).trim() : "";
+      if (v === "") return "—";
+      if (p.key === "hrCycling" || /cycling.*avr/i.test(p.label || "")) {
+        const n = Number(v);
+        if (!isNaN(n)) return String(Math.round(n));
+      }
+      return v;
+    }
+
+    function pillMap_(pills) {
+      const map = {};
+      (pills || []).filter((p) => !isExcludedTypePill(p)).forEach((p) => {
+        if (p.key) map[p.key] = p;
+      });
+      return map;
+    }
+
+    function appendTypeDonut(host, chartList, item) {
+      const pr = Number(item.progress) || 0;
+      const f = Number(item.fact) || 0;
+      const g = Number(item.goal) || 0;
+      const name =
+        (item.shortLabel && String(item.shortLabel).trim()) ||
+        String(item.label || "").trim();
+      const statText = `${f}/${g} (${pr}%)`;
+
+      const cell = document.createElement("div");
+      cell.className = "donut-cell";
+      const wrap = document.createElement("div");
+      wrap.className = "donut-canvas-wrap";
+      const cv = document.createElement("canvas");
+      cv.setAttribute("role", "img");
+      cv.setAttribute("aria-label", `${name}: ${statText}`);
+      wrap.appendChild(cv);
+      cell.appendChild(wrap);
+      const nameEl = document.createElement("div");
+      nameEl.className = "donut-name";
+      nameEl.textContent = name;
+      cell.appendChild(nameEl);
+      const st = document.createElement("div");
+      st.className = "donut-stat";
+      st.textContent = statText;
+      cell.appendChild(st);
+      host.appendChild(cell);
+
+      chartList.push(
+        new Chart(cv, {
+          ...miniDonutOptions(),
+          data: donutDataForPercent(pr),
+        })
+      );
+    }
+
+    function appendTypeStatCard(host, pill) {
+      const label =
+        (pill.shortLabel && String(pill.shortLabel).trim()) ||
+        String(pill.label || "").trim();
+      const val = formatTypePillValue(pill);
+      const card = document.createElement("div");
+      card.className = "type-stat-card";
+      card.innerHTML = `<div class="stat-value">${val}</div><div class="stat-label">${label}</div>`;
+      host.appendChild(card);
+    }
+
+    function renderSportByType(sportByType) {
+      const host = document.getElementById("sportTypeRow");
+
+      if (!sportByType || !Array.isArray(sportByType.byTypeColumn)) {
+        destroyChartList(sportTypeDonutCharts);
+        host.innerHTML = "";
+        return;
+      }
+
+      destroyChartList(sportTypeDonutCharts);
+      host.innerHTML = "";
+
+      const cols = sportByType.byTypeColumn;
+      const pmap = pillMap_(sportByType.statPills);
+
+      if (cols[0]) appendTypeDonut(host, sportTypeDonutCharts, cols[0]);
+      if (pmap.hrRunning) appendTypeStatCard(host, pmap.hrRunning);
+      if (cols[1]) appendTypeDonut(host, sportTypeDonutCharts, cols[1]);
+      if (pmap.hrCycling) appendTypeStatCard(host, pmap.hrCycling);
+      if (pmap.wt) appendTypeStatCard(host, pmap.wt);
+    }
+
     function renderProgress(rows, monthLabel) {
       const totalFact = rows.reduce((s, r) => s + (Number(r.fact) || 0), 0);
       const totalGoal = rows.reduce((s, r) => s + (Number(r.goal) || 0), 0);
@@ -383,6 +559,8 @@
         const monthLabel = opt ? opt.label : data.month || sel.value;
 
         renderProgress(rows, monthLabel);
+        renderSport(data.sport);
+        renderSportByType(data.sportByType);
 
         const labels = rows.map((r) => r.sphere);
         const ratio = rows.map((r) => {
@@ -425,8 +603,6 @@
           },
         });
 
-        renderSport(data.sport);
-
         statusEl.textContent = "";
         saveLastSuccess();
       } catch (e) {
@@ -435,6 +611,7 @@
         destroyChartList(sphereDonutCharts);
         document.getElementById("sphereDonuts").innerHTML = "";
         renderSport(null);
+        renderSportByType(null);
         if (radarChart) {
           radarChart.destroy();
           radarChart = null;
