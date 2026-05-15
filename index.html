@@ -461,10 +461,25 @@
     }
 
     function pillMap_(pills) {
+      const list = (pills || []).filter((p) => !isExcludedTypePill(p));
       const map = {};
-      (pills || []).filter((p) => !isExcludedTypePill(p)).forEach((p) => {
+      list.forEach((p) => {
         if (p.key) map[p.key] = p;
       });
+      const find = (re) =>
+        list.find((p) => re.test(String(p.label || p.shortLabel || "")));
+      if (!map.hrRunning) {
+        const p = find(/heart\s*rate\s*running|running.*avr|пульс.*бег/i);
+        if (p) map.hrRunning = p;
+      }
+      if (!map.hrCycling) {
+        const p = find(/heart\s*rate\s*cycling|cycling.*avr|пульс.*вел/i);
+        if (p) map.hrCycling = p;
+      }
+      if (!map.wt) {
+        const p = find(/^wt\b|вес/i);
+        if (p) map.wt = p;
+      }
       return map;
     }
 
