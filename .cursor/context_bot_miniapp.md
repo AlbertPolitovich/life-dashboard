@@ -37,7 +37,7 @@ cd api && ./run.sh          # нужен ../bot/.venv
 ```
 
 **Cache-bust (актуально по `mini-app/index.html`, проверить перед правкой UI):**  
-`styles.css?v=20261121-safari-pwa` · `app.js?v=20261121-safari-pwa` · `finance.js?v=20260821-export-name`  
+`styles.css?v=20261121-safari-phone-fix` · `app.js?v=20261121-safari-phone-fix` · `finance.js?v=20260821-export-name`  
 `ledger.js?v=20261012-tax-years-only` · `diary.js?v=20260817-diary-month-gap` · `charts.js?v=20260708-finance-food-unified-color`
 
 **Эталон UI финансов:** то, что на проде / в `mini-app/finance.js` (+ `charts.js`). Отдельного canvas-мокапа **нет** (был набросок дизайна, файла нет) — не искать `finance-mockup.canvas.tsx`.
@@ -51,7 +51,7 @@ cd api && ./run.sh          # нужен ../bot/.venv
 - Вторая дверь: `LD_ACCESS_TOKEN` → POST `/auth/login` или GET `/auth/login?k=` → cookie `ld_session` (год, HttpOnly).
 - TG-вход не трогали. Симметрия: один API/БД; без service worker кэша данных.
 - UI: экран `#webLoginGate` если нет TG и нет сессии. Manifest + `mini-app/icons/*`.
-- Cache: `app.js` / `styles.css` `?v=20261121-safari-pwa`. Деплой — когда пользователь попросит + ключ в серверный `api/.env`.
+- Cache: `app.js` / `styles.css` `?v=20261121-safari-phone-fix`. Скрипт `telegram.org` **только** в TG; Safari без него. `/` → редирект на `/mini-app/` (не stealth 404). Данные API по-прежнему 404 без TG/cookie.
 
 ---
 
