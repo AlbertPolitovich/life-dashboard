@@ -6,9 +6,15 @@
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#ffffff",
-  "theme_color": "#3685bf",
+  "background_color": "#000000",
+  "theme_color": "#000000",
   "icons": [
+    {
+      "src": "icons/icon-108.png",
+      "sizes": "108x108",
+      "type": "image/png",
+      "purpose": "any"
+    },
     {
       "src": "icons/icon-192.png",
       "sizes": "192x192",

@@ -48,24 +48,40 @@ restart_api() {
     'chown -R lifebot:lifebot /opt/life-dashboard/api /opt/life-dashboard/mini-app 2>/dev/null || true; systemctl restart life-dashboard-api'
 }
 
-# Write api/.env on VPS: DATABASE_URL + optional LD_ACCESS_TOKEN from local api/.env
-# (rsync excludes .env; without this, cookie-login key would be wiped each deploy).
+# Merge api/.env on VPS: keep existing DATABASE_URL (prod password), refresh LD_ACCESS_TOKEN.
 write_api_env() {
   local host="$1"
   local db_url="$2"
-  local tmp
-  tmp="$(mktemp)"
-  {
-    echo "DATABASE_URL=${db_url}"
-    if [[ -f "${ROOT}/api/.env" ]]; then
-      grep -E '^LD_ACCESS_TOKEN=.+' "${ROOT}/api/.env" | head -1 || true
-    fi
-  } >"${tmp}"
-  chmod 600 "${tmp}"
-  life_dashboard_scp "${tmp}" "root@${host}:${REMOTE}/api/.env"
-  rm -f "${tmp}"
-  life_dashboard_ssh "root@${host}" \
-    "chmod 600 ${REMOTE}/api/.env; chown lifebot:lifebot ${REMOTE}/api/.env 2>/dev/null || true"
+  local tmp_token
+  tmp_token="$(mktemp)"
+  if [[ -f "${ROOT}/api/.env" ]]; then
+    grep -E '^LD_ACCESS_TOKEN=.+' "${ROOT}/api/.env" | head -1 >"${tmp_token}" || true
+  else
+    : >"${tmp_token}"
+  fi
+  life_dashboard_scp "${tmp_token}" "root@${host}:/tmp/ld_access_token.line"
+  rm -f "${tmp_token}"
+  life_dashboard_ssh "root@${host}" bash -s <<REMOTE
+set -euo pipefail
+ENV_FILE="${REMOTE}/api/.env"
+FALLBACK_DB='DATABASE_URL=${db_url}'
+EXISTING_DB=""
+if [[ -f "\$ENV_FILE" ]]; then
+  EXISTING_DB="\$(grep -E '^DATABASE_URL=.+' "\$ENV_FILE" | head -1 || true)"
+fi
+TOKEN_LINE="\$(cat /tmp/ld_access_token.line 2>/dev/null || true)"
+if [[ -z "\$TOKEN_LINE" && -f "\$ENV_FILE" ]]; then
+  TOKEN_LINE="\$(grep -E '^LD_ACCESS_TOKEN=.+' "\$ENV_FILE" | head -1 || true)"
+fi
+{
+  if [[ -n "\$EXISTING_DB" ]]; then echo "\$EXISTING_DB"; else echo "\$FALLBACK_DB"; fi
+  if [[ -n "\$TOKEN_LINE" ]]; then echo "\$TOKEN_LINE"; fi
+} >"\$ENV_FILE"
+chmod 600 "\$ENV_FILE"
+chown lifebot:lifebot "\$ENV_FILE" 2>/dev/null || true
+rm -f /tmp/ld_access_token.line
+grep -E '^[A-Z_]+=' "\$ENV_FILE" | cut -d= -f1
+REMOTE
 }
 
 deploy_selectel() {
