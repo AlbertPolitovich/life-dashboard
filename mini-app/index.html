@@ -1,0 +1,785 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover, interactive-widget=overlays-content" />
+  <title>Life Dashboard</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="styles.css?v=20261012-transport-tax" />
+</head>
+<body>
+  <header class="app-header" id="appHeader">
+    <button type="button" class="app-header__back" id="headerBack" hidden aria-label="Назад">‹</button>
+    <span class="app-header__title" id="headerTitle">Life Dashboard</span>
+    <button type="button" class="app-header__action" id="nutritionProductsBtn" hidden>База продуктов</button>
+    <button type="button" class="app-header__action" id="fillHistoryHeaderBtn" hidden>Другой день</button>
+    <button type="button" class="app-header__action" id="financeExportHeaderBtn" hidden>Экспорт данных</button>
+    <button type="button" class="app-header__action app-header__action--icon" id="diaryDeleteBtn" hidden aria-label="Удалить запись дневника">×</button>
+  </header>
+
+  <main class="app-main">
+    <section class="progress-zone" id="dashboardZone" aria-label="Прогресс месяца">
+      <p class="progress-zone__label" id="monthLabel">—</p>
+      <div class="kpi-grid" id="kpiGrid"></div>
+      <button type="button" class="cta-btn home-fill-btn" id="homeFillBtn">Заполнить</button>
+      <button type="button" class="nutrition-zone" id="nutritionZoneBtn" hidden aria-label="КБЖУ сегодня">
+        <p class="nutrition-zone__label">КБЖУ · Сегодня</p>
+        <div class="nutrition-bars nutrition-bars--home" id="nutritionBars"></div>
+      </button>
+      <article class="finance-zone" id="financeZoneBtn" hidden aria-label="Финансы">
+        <button type="button" class="finance-plan-banner" id="financePlanBanner" hidden>
+          <span class="finance-plan-banner__text" id="financePlanBannerText">Веди план финансов на следующий месяц</span>
+          <span class="finance-plan-banner__chev" aria-hidden="true">›</span>
+        </button>
+        <div class="finance-zone__card">
+          <button type="button" class="finance-zone__head" id="financeZoneOpenBtn">
+            <p class="finance-zone__label" id="financeZoneTitle">Финансы</p>
+            <span class="finance-zone__chev" aria-hidden="true">›</span>
+          </button>
+          <div class="finance-zone__balance-block">
+            <p class="finance-zone__balance-label" id="financeBalanceLabel">Баланс с начала года</p>
+            <div class="finance-zone__balance-line">
+              <p class="finance-zone__balance-value" id="financeBalanceValue">—</p>
+              <div class="finance-zone__period-toggle" id="financeBalanceToggle" role="tablist" aria-label="Период баланса">
+                <button type="button" class="finance-zone__period-btn is-active" data-finance-balance-mode="ytd" role="tab" aria-selected="true">год</button>
+                <button type="button" class="finance-zone__period-btn" data-finance-balance-mode="month" role="tab" aria-selected="false">мес</button>
+              </div>
+            </div>
+          </div>
+          <hr class="finance-zone__divider" id="financeBalanceDivider" hidden />
+          <div id="financeRemindersContainer"></div>
+          <hr class="finance-zone__divider finance-zone__divider--full" id="financeActionsDivider" />
+          <div class="finance-zone__actions">
+            <button type="button" class="finance-zone__action finance-zone__action--expense" id="financeExpenseBtn">− Расход</button>
+            <button type="button" class="finance-zone__action finance-zone__action--income" id="financeIncomeBtn">+ Доход</button>
+          </div>
+        </div>
+      </article>
+      <article class="diary-zone" id="diaryZoneBtn" hidden aria-label="Дневник">
+        <!-- Variant A: finance-like card (default) -->
+        <div class="diary-zone__card" id="diaryZoneA">
+          <button type="button" class="diary-zone__head" id="diaryZoneCalBtn">
+            <p class="diary-zone__label">Дневник</p>
+            <span class="diary-zone__chev" aria-hidden="true">›</span>
+          </button>
+          <p class="diary-zone__today-status" id="diaryZoneTodayStatus" hidden></p>
+          <div class="diary-zone__preview" id="diaryZonePreview"></div>
+          <div class="diary-zone__cta-wrap">
+            <button type="button" class="cta-btn cta-btn--inline" id="diaryZoneFillBtnA">Заполнить дневник</button>
+          </div>
+        </div>
+        <!-- Variant B: compact row (activated via ?diaryHome=b) -->
+        <div class="diary-zone__compact-wrap" id="diaryZoneB" hidden>
+          <button type="button" class="diary-zone__compact-body" id="diaryZoneFillBtnB" aria-label="Заполнить дневник">
+            <div class="diary-zone__compact-content">
+              <p class="diary-zone__label">Дневник</p>
+              <p class="diary-zone__compact-status" id="diaryZoneStatus">Не заполнен</p>
+            </div>
+          </button>
+          <button type="button" class="diary-zone__compact-cal" id="diaryZoneCalBtnB" aria-label="Открыть календарь">›</button>
+        </div>
+      </article>
+      <article class="ledger-zone" id="ledgerZoneBtn" hidden aria-label="Ledger">
+        <div class="ledger-zone__card">
+          <button type="button" class="ledger-zone__head" id="ledgerZoneOpenBtn">
+            <p class="ledger-zone__label">Ledger</p>
+            <span class="ledger-zone__chev" aria-hidden="true">›</span>
+          </button>
+          <div class="ledger-zone__balance-block">
+            <p class="ledger-zone__balance-label" id="ledgerBalanceLabel">Вложено с начала года</p>
+            <div class="ledger-zone__balance-line">
+              <p class="ledger-zone__balance-value" id="ledgerBalanceValue">—</p>
+              <div class="ledger-zone__period-toggle" id="ledgerBalanceToggle" role="tablist" aria-label="Период Ledger">
+                <button type="button" class="ledger-zone__period-btn is-active" data-ledger-balance-mode="ytd" role="tab" aria-selected="true">год</button>
+                <button type="button" class="ledger-zone__period-btn" data-ledger-balance-mode="month" role="tab" aria-selected="false">мес</button>
+              </div>
+            </div>
+          </div>
+          <hr class="ledger-zone__divider" id="ledgerReminderDivider" hidden />
+          <div id="ledgerRemindersContainer"></div>
+          <hr class="ledger-zone__divider" id="ledgerInboxDivider" hidden />
+          <button type="button" class="ledger-zone__inbox" id="ledgerInboxRow" hidden>
+            <span class="ledger-zone__inbox-dot" aria-hidden="true"></span>
+            <span class="ledger-zone__inbox-text" id="ledgerInboxText"></span>
+          </button>
+          <hr class="ledger-zone__divider" id="ledgerAssetsDivider" />
+          <div class="ledger-zone__assets" id="ledgerAssetRows"></div>
+          <hr class="ledger-zone__divider ledger-zone__divider--full" id="ledgerCtaDivider" hidden />
+          <div class="ledger-zone__cta-wrap" id="ledgerCtaWrap" hidden>
+            <button type="button" class="cta-btn cta-btn--inline" id="ledgerAllocateBtn">Распределить</button>
+          </div>
+        </div>
+      </article>
+      <p class="progress-zone__error" id="dashboardError" hidden></p>
+    </section>
+
+    <section class="flow-screen flow-screen--detail" id="flowDetailProductivity" hidden>
+      <div class="segmented segmented--period" role="tablist" aria-label="Период продуктивности">
+        <button type="button" class="segmented__btn is-active" data-period="week" role="tab" aria-selected="true">Неделя</button>
+        <button type="button" class="segmented__btn" data-period="month" role="tab" aria-selected="false">Месяц</button>
+      </div>
+      <div class="progress-strip" id="productivityStrip" aria-label="Общий прогресс"></div>
+      <div class="radar-block" id="productivityRadarBlock" hidden>
+        <p class="radar-block__title">Колесо баланса</p>
+        <div class="radar-chart-host">
+          <canvas id="productivityRadarChart" aria-label="Radar chart факт/цель по сферам"></canvas>
+        </div>
+      </div>
+      <div class="sport-detail-blocks" id="productivityDetailBlocks" aria-label="Сферы продуктивности"></div>
+    </section>
+
+    <section class="flow-screen flow-screen--detail" id="flowDetailSport" hidden>
+      <div class="segmented segmented--period" role="tablist" aria-label="Период спорта">
+        <button type="button" class="segmented__btn is-active" data-sport-period="week" role="tab" aria-selected="true">Неделя</button>
+        <button type="button" class="segmented__btn" data-sport-period="month" role="tab" aria-selected="false">Месяц</button>
+      </div>
+      <div class="progress-strip" id="sportStrip" aria-label="Итог по спорту"></div>
+      <div class="sport-detail-blocks" id="sportDetailBlocks" aria-label="Спорт по блокам"></div>
+    </section>
+
+    <section class="flow-screen flow-screen--detail" id="flowDetailNutrition" hidden>
+      <div class="nutrition-detail-chrome">
+        <div class="nutrition-day-strip progress-strip--swipe" id="nutritionDayStrip" aria-label="День питания"></div>
+      </div>
+      <div class="nutrition-detail__bars" id="nutritionDetailBars" aria-label="КБЖУ за день"></div>
+      <p class="nutrition-detail__target" id="nutritionDetailTarget" hidden></p>
+      <div class="meal-list" id="nutritionMealList" aria-label="Приёмы пищи"></div>
+      <div class="nutrition-export" id="nutritionExportBlock">
+        <div class="nutrition-toolbar__export">
+          <button type="button" class="nutrition-toolbar__cheatmeal" id="nutritionCheatmealBtn" aria-pressed="false" aria-label="Читмил день">Читмил</button>
+          <div class="nutrition-toolbar__export-right">
+            <div class="segmented segmented--compact nutrition-toolbar__period" role="tablist" aria-label="Период выгрузки">
+              <button type="button" class="segmented__btn is-active" data-export-period="7d" role="tab" aria-selected="true">7</button>
+              <button type="button" class="segmented__btn" data-export-period="30d" role="tab" aria-selected="false">30</button>
+              <button type="button" class="segmented__btn" data-export-period="all" role="tab" aria-selected="false">365</button>
+            </div>
+            <button type="button" class="nutrition-toolbar__dl" id="nutritionExportBtn" aria-label="Скачать CSV">
+              <svg class="nutrition-toolbar__dl-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M8 2.5v8M5 7.5l3 3 3-3"/>
+                <path stroke="currentColor" stroke-width="1.5" stroke-linecap="round" d="M3.5 12.5h9"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="flow-screen" id="flowNutritionProducts" hidden>
+      <div class="product-db-chips" id="productDbMode" role="tablist" aria-label="Фильтр списка">
+        <button type="button" class="product-db-chip is-active" data-product-db-mode="recent" role="tab" aria-selected="true">Недавние</button>
+        <button type="button" class="product-db-chip" data-product-db-mode="favorites" role="tab" aria-selected="false">Избранные</button>
+        <button type="button" class="product-db-chip" data-product-db-mode="mine" role="tab" aria-selected="false">Мои продукты</button>
+        <button type="button" class="product-db-chip" data-product-db-mode="dishes" role="tab" aria-selected="false">Мои блюда</button>
+      </div>
+      <div class="product-search">
+        <input type="search" class="field-input" id="productDbSearch" data-keyboard="text" placeholder="Найти продукт…" autocomplete="off" />
+        <span class="product-search__ph" id="productDbSearchPh" hidden aria-hidden="true">Найти в <strong>избранном</strong></span>
+        <button type="button" class="product-search__clear" id="productDbSearchClear" aria-label="Очистить поиск" hidden>×</button>
+      </div>
+      <div class="product-db-toolbar__actions">
+        <button type="button" class="product-db-add" id="productCreateOpenBtn" aria-label="Добавить продукт">Добавить продукт</button>
+        <button type="button" class="product-db-add product-db-add--dish" id="dishCreateOpenBtn" aria-label="Создать блюдо">Создать блюдо</button>
+      </div>
+      <ul class="product-db-list" id="productDbList"></ul>
+    </section>
+
+    <section class="flow-screen" id="flowNutritionProduct" hidden>
+      <article class="product-detail-card">
+        <div class="product-detail-card__title-row">
+          <h2 class="product-detail-card__title" id="productDetailTitle">—</h2>
+          <span class="product-dish-tag" id="productDetailDishTag" hidden>блюдо</span>
+        </div>
+        <div class="product-detail-score-row">
+          <div class="product-detail-score-row__main">
+            <p class="product-detail-card__kcal" id="productDetailKcal"></p>
+            <p class="product-bju-line" id="productDetailBjuLine" hidden>
+              <span class="product-bju-line__caption">Рейтинг 28score</span>
+              <span class="product-bju-line__score" id="productDetailBjuScore"></span>
+              <span class="product-bju-line__sep" aria-hidden="true">·</span>
+              <span class="product-bju-line__tier" id="productDetailBjuTierWord"></span>
+              <button type="button" class="product-bju-info" id="productDetailBjuInfo" aria-label="О рейтинге 28score" aria-haspopup="dialog" aria-expanded="false" aria-controls="bjuInfoSheet">i</button>
+            </p>
+          </div>
+          <button type="button" class="product-favorite-btn" id="productDetailFavoriteBtn" aria-label="В избранное" aria-pressed="false" title="Избранное">☆</button>
+        </div>
+        <div class="product-serving-card" id="productServingCard" hidden>
+          <div id="productDishCookBlock" hidden>
+            <p class="nutrition-sheet__label">Как готовишь</p>
+            <button type="button" class="dish-item-cook-btn" id="productDishCookBtn" aria-haspopup="dialog" aria-controls="dishCookPickSheet">Сырой</button>
+          </div>
+          <div class="product-serving-row">
+            <label class="field-label product-serving-field">
+              <span id="productServingAmountLabel">Количество</span>
+              <input class="field-input field-input--numeric" id="productServingAmount" type="text" inputmode="decimal" dir="ltr" autocomplete="off" placeholder="120" />
+            </label>
+            <label class="field-label product-serving-field">
+              <span>Размер порции</span>
+              <select class="field-input" id="productServingUnit">
+                <option value="g">г</option>
+                <option value="100g">100 г</option>
+              </select>
+            </label>
+          </div>
+          <div id="productDishOilBlock" hidden>
+            <label class="field-label">Сколько грамм масла было добавлено
+              <input class="field-input field-input--numeric" id="productDishOil" type="text" inputmode="decimal" dir="ltr" autocomplete="off" placeholder="например 8" />
+            </label>
+          </div>
+          <button type="button" class="product-macro-view-toggle" id="productMacroViewToggle">Показать на 100 г</button>
+        </div>
+        <div class="product-macro-layout">
+          <div class="product-macro-donut-host" id="productMacroDonutHost" aria-label="БЖУ на 100 г"></div>
+          <ul class="product-macro-legend" id="productMacroLegend"></ul>
+        </div>
+        <button type="button" class="cta-btn cta-btn--inline" id="productDetailAddBtn">Добавить в день</button>
+
+        <div class="product-note" id="productNoteBlock">
+          <div class="product-note__head">
+            <label class="field-label product-note__label" for="productDetailNote">Заметка</label>
+            <span class="product-note__ok" id="productDetailNoteOk" hidden aria-hidden="true">✓</span>
+          </div>
+          <textarea
+            class="field-input product-note__input"
+            id="productDetailNote"
+            data-keyboard="text"
+            rows="3"
+            maxlength="2000"
+            placeholder="Например: 1 пряник весит 22 гр."
+            autocomplete="off"
+          ></textarea>
+          <button type="button" class="product-note__resize" id="productDetailNoteResize" aria-label="Изменить высоту заметки"></button>
+        </div>
+
+        <details class="product-edit-card" id="productEditCard">
+          <summary class="product-edit-card__summary">
+            <span class="product-edit-card__title">Изменить КБЖУ</span>
+            <span class="product-edit-card__chev" aria-hidden="true">›</span>
+          </summary>
+          <form class="product-edit__form" id="productEditForm">
+            <label class="field-label">Название<input class="field-input" type="text" name="name" data-keyboard="text" autocomplete="off" required /></label>
+            <label class="field-label">Ккал / 100 г<input class="field-input field-input--numeric" type="text" name="kcal" inputmode="decimal" dir="ltr" autocomplete="off" autocorrect="off" spellcheck="false" required /></label>
+            <label class="field-label">Белок / 100 г<input class="field-input field-input--numeric" type="text" name="protein" inputmode="decimal" dir="ltr" autocomplete="off" autocorrect="off" spellcheck="false" required /></label>
+            <label class="field-label">Углеводы / 100 г<input class="field-input field-input--numeric" type="text" name="carbs" inputmode="decimal" dir="ltr" autocomplete="off" autocorrect="off" spellcheck="false" required /></label>
+            <label class="field-label">Жиры / 100 г<input class="field-input field-input--numeric" type="text" name="fat" inputmode="decimal" dir="ltr" autocomplete="off" autocorrect="off" spellcheck="false" required /></label>
+            <label class="field-label">Клетчатка / 100 г<input class="field-input field-input--numeric" type="text" name="fiber" inputmode="decimal" dir="ltr" autocomplete="off" autocorrect="off" spellcheck="false" value="0" /></label>
+            <button type="submit" class="cta-btn cta-btn--inline">Сохранить изменения</button>
+          </form>
+        </details>
+        <button type="button" class="cta-btn cta-btn--inline cta-btn--dish-edit" id="productDishEditBtn" hidden>Изменить состав</button>
+        <button type="button" class="cta-btn cta-btn--inline cta-btn--danger" id="productDetailDeleteBtn" hidden>Удалить продукт</button>
+      </article>
+    </section>
+
+    <section class="flow-screen flow-screen--detail" id="flowDetailFinance" hidden>
+      <div class="finance-detail-chrome">
+        <div class="finance-month-nav" id="financeMonthNav" aria-label="Месяц"></div>
+        <div class="segmented finance-tabs" role="tablist" aria-label="Раздел финансов">
+          <button type="button" class="segmented__btn is-active" data-finance-tab="overview" role="tab">Обзор</button>
+          <button type="button" class="segmented__btn" data-finance-tab="metrics" role="tab">Метрики</button>
+          <button type="button" class="segmented__btn" data-finance-tab="categories" role="tab">Категории</button>
+          <button type="button" class="segmented__btn" data-finance-tab="plan" role="tab">План</button>
+          <button type="button" class="segmented__btn" data-finance-tab="history" role="tab">История</button>
+        </div>
+      </div>
+      <div class="finance-sections" id="financeSections">
+        <section class="finance-tab-panel is-active" data-finance-panel="overview" aria-label="Обзор">
+          <div class="finance-overview-head">
+            <p class="finance-section-head">Обзор</p>
+            <button type="button" class="finance-zone__balance-toggle" id="financeOverviewPeriodToggle" aria-label="Период обзора">мес</button>
+          </div>
+          <div id="financeTabOverview"></div>
+        </section>
+        <section class="finance-tab-panel" data-finance-panel="metrics" aria-label="Метрики">
+          <p class="finance-section-head">Метрики</p>
+          <div id="financeTabMetrics"></div>
+        </section>
+        <section class="finance-tab-panel" data-finance-panel="categories" aria-label="Категории">
+          <p class="finance-section-head">Категории</p>
+          <div id="financeTabCategories"></div>
+        </section>
+        <section class="finance-tab-panel" data-finance-panel="plan" aria-label="План">
+          <p class="finance-section-head">План</p>
+          <div id="financeTabPlan"></div>
+        </section>
+        <section class="finance-tab-panel" data-finance-panel="history" aria-label="История">
+          <p class="finance-section-head">История</p>
+          <div id="financeTabHistory"></div>
+          <button type="button" class="cta-btn finance-history-export" id="financeHistoryExportBtn">Экспорт данных</button>
+        </section>
+      </div>
+    </section>
+
+    <section class="flow-screen flow-screen--detail" id="flowDetailLedger" hidden>
+      <div class="ledger-detail-chrome">
+        <div class="ledger-detail-chrome__row">
+          <div class="finance-month-nav ledger-asset-nav" id="ledgerAssetNav" role="tablist" aria-label="Объект"></div>
+          <button type="button" class="ledger-add-car-btn" id="ledgerAddCarBtn" hidden aria-label="Добавить машину">+</button>
+        </div>
+        <div class="segmented finance-tabs ledger-tabs" id="ledgerTabs" role="tablist" aria-label="Раздел Ledger"></div>
+      </div>
+      <div class="ledger-sections" id="ledgerSections">
+        <section class="ledger-tab-panel is-active" data-ledger-panel="overview" aria-label="Обзор">
+          <p class="finance-section-head">Обзор</p>
+          <div id="ledgerOverviewApartment">
+            <div class="ledger-apartment-overview" id="ledgerApartmentOverview"></div>
+          </div>
+          <div id="ledgerOverviewCar" hidden>
+            <div class="ledger-overview-metrics" id="ledgerOverviewMetrics"></div>
+          </div>
+        </section>
+        <section class="ledger-tab-panel" data-ledger-panel="mortgage" aria-label="Ипотека">
+          <p class="finance-section-head">Ипотека</p>
+          <div id="ledgerApartmentMortgagePanel"></div>
+        </section>
+        <section class="ledger-tab-panel" data-ledger-panel="repair" aria-label="Ремонт">
+          <p class="finance-section-head">Ремонт</p>
+          <div id="ledgerApartmentRepairPanel"></div>
+        </section>
+        <section class="ledger-tab-panel" data-ledger-panel="kvartplata" aria-label="Кварплата">
+          <p class="finance-section-head">Кварплата</p>
+          <div id="ledgerApartmentKvartplataPanel"></div>
+        </section>
+        <section class="ledger-tab-panel" data-ledger-panel="consumables" aria-label="Расходники">
+          <p class="finance-section-head">Расходники</p>
+          <div id="ledgerCarConsumablesPanel"></div>
+        </section>
+        <section class="ledger-tab-panel" data-ledger-panel="service" aria-label="Ремонт">
+          <p class="finance-section-head">Ремонт</p>
+          <div id="ledgerCarServicePanel"></div>
+        </section>
+        <section class="ledger-tab-panel" data-ledger-panel="tech" aria-label="Техобсл">
+          <p class="finance-section-head">Техобсл</p>
+          <div id="ledgerCarTechPanel"></div>
+        </section>
+        <section class="ledger-tab-panel" data-ledger-panel="inbox" aria-label="Inbox">
+          <p class="finance-section-head">Inbox</p>
+          <div class="ledger-inbox-list" id="ledgerInboxList"></div>
+        </section>
+      </div>
+    </section>
+
+    <section class="flow-screen flow-screen--fill" id="flowFill" hidden>
+      <button type="button" class="date-header__retry fill-error" id="errorBadge" hidden>Ошибка — Повторить</button>
+
+      <div class="fill-morning" id="fillMorning">
+        <div class="fill-onboarding" id="fillOnboarding" hidden>
+          <div class="fill-onboarding__track" id="fillOnboardingTrack" aria-hidden="true">
+            <span class="fill-onboarding__step" data-onb-step="1">① Вчера</span>
+            <span class="fill-onboarding__line"></span>
+            <span class="fill-onboarding__step" data-onb-step="2">② Спорт</span>
+          </div>
+          <p class="fill-onboarding__hint" id="fillOnboardingHint"></p>
+        </div>
+
+        <section class="fill-block fill-block--routine" id="routineBlock" aria-label="Продуктивность за вчера">
+          <div class="fill-block__head">
+            <div class="fill-block__titles">
+              <p class="fill-block__title">Итог вчера</p>
+              <p class="fill-block__date" id="routineDateLine">—</p>
+            </div>
+            <div class="fill-block__badges">
+              <span class="fill-block__badge is-yesterday" id="routineDayBadge">Вчера</span>
+              <button type="button" class="fill-block__badge fill-block__badge--btn is-today" id="fillOtherDayBtn" hidden>Другой день</button>
+            </div>
+          </div>
+          <p class="section-counter" id="routineCounter">ПРОДУКТИВНОСТЬ · 0/8</p>
+          <div class="routine-grid" id="routineGrid"></div>
+          <div class="fill-routine-summary" id="routineSummaryPreview" hidden></div>
+        </section>
+
+        <div class="fill-divider" id="fillDivider" role="separator" aria-hidden="true"></div>
+
+        <section class="fill-block fill-block--sport" id="sportBlock" aria-label="Спорт за сегодня">
+          <div class="fill-block__head">
+            <div class="fill-block__titles">
+              <p class="fill-block__title">Тренировка</p>
+              <p class="fill-block__date" id="sportDateLine">—</p>
+            </div>
+            <span class="fill-block__badge is-today" id="sportDayBadge">Сегодня</span>
+          </div>
+          <div class="sport-fields" id="sportFields"></div>
+        </section>
+
+      </div>
+
+      <div class="fill-history" id="fillHistory" hidden>
+        <div class="fill-history-chrome">
+          <div class="nutrition-day-strip progress-strip--swipe" id="fillHistoryDayStrip" aria-label="День"></div>
+        </div>
+
+        <section class="form-zone form-zone--history" id="formZoneHistory">
+          <div class="segmented" role="tablist" aria-label="Раздел ввода">
+            <button type="button" class="segmented__btn is-active" data-tab="routine" role="tab" aria-selected="true">Продуктивность</button>
+            <button type="button" class="segmented__btn" data-tab="sport" role="tab" aria-selected="false">Спорт</button>
+          </div>
+
+          <div class="tab-panel is-active" id="panelRoutine" role="tabpanel">
+            <p class="section-counter" id="historyRoutineCounter">ПРОДУКТИВНОСТЬ · 0/8</p>
+            <div class="routine-grid" id="historyRoutineGrid"></div>
+          </div>
+
+          <div class="tab-panel" id="panelSport" role="tabpanel" hidden>
+            <div class="sport-fields" id="historySportFields"></div>
+          </div>
+        </section>
+      </div>
+    </section>
+    <section class="flow-screen flow-screen--diary-cal" id="flowDiary" hidden>
+      <div class="diary-cal-chrome">
+        <div class="diary-cal-nav">
+          <div class="diary-cal-nav__month-row">
+            <button type="button" class="diary-cal-nav__chev" id="diaryCalPrev" aria-label="Предыдущий месяц">‹</button>
+            <div class="diary-cal-nav__title">
+              <span class="diary-cal-nav__month" id="diaryCalMonthShort">Jun</span>
+              <span class="diary-cal-nav__year" id="diaryCalYear">2026</span>
+            </div>
+            <button type="button" class="diary-cal-nav__chev" id="diaryCalNext" aria-label="Следующий месяц">›</button>
+          </div>
+        </div>
+      </div>
+      <div class="diary-cal" id="diaryCalWrap" aria-label="Календарь дневника"></div>
+    </section>
+
+    <section class="flow-screen" id="flowDiaryEditor" hidden>
+      <textarea class="diary-editor__textarea" id="diaryEditorTextarea" data-keyboard="text" placeholder="Что было важным в этот день…"></textarea>
+      <div class="diary-wiki-suggest" id="diaryWikiSuggest" hidden role="listbox" aria-label="Недавние ссылки"></div>
+    </section>
+  </main>
+
+  <footer class="cta-bar" id="diaryCtaBar" hidden>
+    <button type="button" class="cta-btn" id="diaryEditorSaveBtn">Сохранить</button>
+  </footer>
+
+  <footer class="cta-bar" id="ctaBar">
+    <button type="button" class="cta-btn" id="saveBtn">Заполнить</button>
+  </footer>
+  <footer class="cta-bar" id="nutritionCtaBar" hidden>
+    <button type="button" class="cta-btn" id="nutritionAddMainBtn">Добавить продукт</button>
+  </footer>
+
+  <div class="confirm-sheet" id="productDeleteConfirm" hidden>
+    <button type="button" class="confirm-sheet__backdrop" id="productDeleteBackdrop" aria-label="Закрыть"></button>
+    <div class="confirm-sheet__panel" role="alertdialog" aria-labelledby="productDeleteConfirmText">
+      <p class="confirm-sheet__text" id="productDeleteConfirmText">Удалить продукт из базы?</p>
+      <div class="confirm-sheet__actions">
+        <button type="button" class="confirm-sheet__btn confirm-sheet__btn--no" id="productDeleteNo">Нет</button>
+        <button type="button" class="confirm-sheet__btn confirm-sheet__btn--yes" id="productDeleteYes">Да</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="bju-info-sheet" id="bjuInfoSheet" hidden>
+    <button type="button" class="bju-info-sheet__backdrop" id="bjuInfoBackdrop" aria-label="Закрыть"></button>
+    <div class="bju-info-sheet__panel" role="dialog" aria-labelledby="bjuInfoTitle">
+      <p class="bju-info-sheet__title" id="bjuInfoTitle">Что такое 28score</p>
+      <p class="bju-info-sheet__text">Оценка продукта по БЖУ на 100&nbsp;г. Балл выше, если в калориях <strong>больше белка и клетчатки</strong>; ниже — если много жира или углеводов при низком количестве белка.</p>
+      <p class="bju-info-sheet__text bju-info-sheet__text--muted">Считаем только БЖУ: сахар, соль и различные добавки не учитываем. Оценка упрощённая, не стоит воспринимать её буквально.</p>
+      <button type="button" class="bju-info-sheet__close" id="bjuInfoClose">Понятно</button>
+    </div>
+  </div>
+
+  <div class="nutrition-sheet" id="productCreateSheet" hidden>
+    <button type="button" class="nutrition-sheet__backdrop" id="productCreateBackdrop" aria-label="Закрыть"></button>
+    <div class="nutrition-sheet__panel product-create-sheet" role="dialog" aria-labelledby="productCreateTitle">
+      <div class="product-create-sheet__head">
+        <p class="nutrition-sheet__title" id="productCreateTitle">Свой продукт</p>
+        <button type="button" class="product-create-sheet__close" id="productCreateCloseBtn" aria-label="Закрыть">×</button>
+      </div>
+      <form class="product-create__form" id="productCreateForm">
+        <div class="product-create__step" id="productCreateStepName">
+          <label class="field-label">Название<input class="field-input" type="text" name="name" data-keyboard="text" autocomplete="off" required /></label>
+          <button type="button" class="cta-btn cta-btn--inline" id="productCreateNextBtn">Далее</button>
+        </div>
+        <div class="product-create__step" id="productCreateStepMacros" hidden>
+          <p class="nutrition-sheet__label">КБЖУ на 100 г</p>
+          <label class="field-label">Ккал / 100 г<input class="field-input field-input--numeric" type="text" name="kcal" inputmode="decimal" dir="ltr" autocomplete="off" /></label>
+          <label class="field-label">Белок / 100 г<input class="field-input field-input--numeric" type="text" name="protein" inputmode="decimal" dir="ltr" autocomplete="off" /></label>
+          <label class="field-label">Углеводы / 100 г<input class="field-input field-input--numeric" type="text" name="carbs" inputmode="decimal" dir="ltr" autocomplete="off" /></label>
+          <label class="field-label">Жиры / 100 г<input class="field-input field-input--numeric" type="text" name="fat" inputmode="decimal" dir="ltr" autocomplete="off" /></label>
+          <div class="product-create__actions">
+            <button type="submit" class="cta-btn cta-btn--inline">Сохранить в базу</button>
+            <button type="button" class="cta-btn cta-btn--inline cta-btn--secondary" id="productCreateSaveAndAddBtn">Сохранить и добавить в приём пищи</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="nutrition-sheet" id="dishCreateSheet" hidden>
+    <button type="button" class="nutrition-sheet__backdrop" id="dishCreateBackdrop" aria-label="Закрыть"></button>
+    <div class="nutrition-sheet__panel product-create-sheet dish-create-sheet" role="dialog" aria-labelledby="dishCreateTitle">
+      <div class="product-create-sheet__head">
+        <div class="dish-create__title-wrap">
+          <p class="nutrition-sheet__title" id="dishCreateTitle">Создать блюдо</p>
+          <button type="button" class="dish-create__rename-btn" id="dishCreateRenameBtn" hidden aria-label="Изменить название" title="Изменить название">
+            <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+            </svg>
+          </button>
+        </div>
+        <button type="button" class="product-create-sheet__close" id="dishCreateCloseBtn" aria-label="Закрыть">×</button>
+      </div>
+      <div class="dish-create__step" id="dishCreateStepName">
+        <label class="field-label">Название
+          <input class="field-input" id="dishCreateName" type="text" data-keyboard="text" autocomplete="off" placeholder="например плов" />
+        </label>
+        <button type="button" class="cta-btn cta-btn--inline" id="dishCreateNextBtn">Далее</button>
+      </div>
+      <div class="dish-create__step" id="dishCreateStepBuild" hidden>
+        <label class="field-label">Ингредиент
+          <input class="field-input" id="dishCreateSearch" type="search" data-keyboard="text" placeholder="Найти продукт…" autocomplete="off" />
+        </label>
+        <ul class="dish-create__hits" id="dishCreateHits" hidden></ul>
+        <ul class="dish-create__items" id="dishCreateItems"></ul>
+        <div class="dish-create__cook" id="dishCreateCookBlock">
+          <p class="nutrition-sheet__label">Как готовишь блюдо</p>
+          <div class="segmented segmented--wrap segmented--cook" id="dishCreateCook" role="tablist" aria-label="Как готовишь блюдо"></div>
+          <div id="dishCreateOilBlock" hidden>
+            <label class="field-label">Сколько грамм масла было добавлено
+              <input class="field-input field-input--numeric" id="dishCreateOil" type="text" inputmode="decimal" dir="ltr" autocomplete="off" placeholder="например 8" />
+            </label>
+          </div>
+        </div>
+        <label class="field-label">Вес готового блюда, г
+          <input class="field-input field-input--numeric" id="dishCreateYield" type="text" inputmode="decimal" dir="ltr" autocomplete="off" readonly tabindex="-1" />
+        </label>
+        <p class="dish-create__preview" id="dishCreatePreview">Добавьте ингредиенты</p>
+        <div class="product-note dish-create__note" id="dishCreateNoteBlock">
+          <div class="product-note__head">
+            <label class="field-label product-note__label" for="dishCreateNote">Заметка</label>
+          </div>
+          <textarea
+            class="field-input product-note__input"
+            id="dishCreateNote"
+            data-keyboard="text"
+            rows="3"
+            maxlength="2000"
+            placeholder="Здесь вы можете записать состав и количество ингредиентов вашего блюда"
+            autocomplete="off"
+          ></textarea>
+          <button type="button" class="product-note__resize" id="dishCreateNoteResize" aria-label="Изменить высоту заметки"></button>
+        </div>
+        <p class="profile-calc-form__error" id="dishCreateError" hidden></p>
+        <button type="button" class="cta-btn cta-btn--inline" id="dishCreateSaveBtn">Сохранить в Мои</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="nutrition-sheet dish-item-sheet" id="dishItemSheet" hidden>
+    <button type="button" class="nutrition-sheet__backdrop" id="dishItemBackdrop" aria-label="Закрыть"></button>
+    <div class="nutrition-sheet__panel" role="dialog" aria-labelledby="dishItemTitle">
+      <p class="nutrition-sheet__title" id="dishItemTitle">—</p>
+      <div id="dishItemCookBlock" hidden>
+        <p class="nutrition-sheet__label">Как готовишь</p>
+        <button type="button" class="dish-item-cook-btn" id="dishItemCookBtn" aria-haspopup="dialog" aria-controls="dishCookPickSheet">Сырой</button>
+        <p class="nutrition-sheet__cook-hint" id="dishItemCookHint" hidden></p>
+      </div>
+      <label class="field-label"><span id="dishItemGramsLabel">Граммы</span>
+        <input class="field-input field-input--numeric" id="dishItemGrams" type="text" inputmode="decimal" dir="ltr" autocomplete="off" placeholder="например 120" />
+      </label>
+      <div id="dishItemOilBlock" hidden>
+        <label class="field-label">Сколько грамм масла было добавлено
+          <input class="field-input field-input--numeric" id="dishItemOil" type="text" inputmode="decimal" dir="ltr" autocomplete="off" placeholder="например 8" />
+        </label>
+      </div>
+      <button type="button" class="cta-btn" id="dishItemDoneBtn">Готово</button>
+    </div>
+  </div>
+
+  <div class="bju-info-sheet" id="dishCookPickSheet" hidden>
+    <button type="button" class="bju-info-sheet__backdrop" id="dishCookPickBackdrop" aria-label="Закрыть"></button>
+    <div class="bju-info-sheet__panel" role="dialog" aria-labelledby="dishCookPickTitle">
+      <p class="bju-info-sheet__title" id="dishCookPickTitle">Как готовишь</p>
+      <div class="physio-pick-options" id="dishCookPickOptions" role="listbox"></div>
+      <button type="button" class="bju-info-sheet__close" id="dishCookPickClose">Отмена</button>
+    </div>
+  </div>
+
+  <div class="finance-sheet" id="financeTxnSheet" hidden>
+    <button type="button" class="finance-sheet__backdrop" id="financeSheetBackdrop" aria-label="Закрыть"></button>
+    <div class="finance-sheet__panel" role="dialog" aria-labelledby="financeSheetTitle">
+      <div class="finance-sheet__handle" aria-hidden="true"></div>
+      <div class="finance-sheet__head">
+        <p class="finance-sheet__title" id="financeSheetTitle">Новый расход</p>
+        <button type="button" class="finance-sheet__close" id="financeSheetClose" aria-label="Закрыть">×</button>
+      </div>
+      <div class="finance-sheet__amount-wrap finance-sheet__amount-wrap--expense" id="financeSheetAmountWrap">
+        <input class="finance-sheet__amount" id="financeSheetAmount" inputmode="decimal" placeholder="0 ₽" aria-label="Сумма" />
+      </div>
+      <p class="finance-sheet__label">Категория</p>
+      <div class="finance-sheet__chips" id="financeSheetChips"></div>
+      <div class="finance-sheet__more" id="financeSheetMore" hidden></div>
+      <div class="finance-sheet__date-row">
+        <span class="finance-sheet__date-label">Дата</span>
+        <button type="button" class="finance-sheet__date-btn" id="financeSheetDateBtn" aria-expanded="false">—</button>
+      </div>
+      <div class="finance-sheet__wheel-wrap" id="financeSheetWheelWrap" hidden>
+        <div class="wheel-picker wheel-picker--compact" id="financeSheetWheel">
+          <div class="wheel-picker__frame"></div>
+          <div class="wheel-col" id="financeSheetWheelDay"></div>
+          <div class="wheel-col" id="financeSheetWheelMonth"></div>
+          <div class="wheel-col" id="financeSheetWheelYear"></div>
+        </div>
+      </div>
+      <input class="finance-sheet__note" id="financeSheetNote" type="text" data-keyboard="text" placeholder="Заметка (необязательно)" />
+      <hr class="finance-sheet__divider" />
+      <div class="finance-sheet__actions">
+        <button type="button" class="finance-sheet__btn finance-sheet__btn--secondary" id="financeSheetSaveMore">Сохр. + ещё</button>
+        <button type="button" class="finance-sheet__btn finance-sheet__btn--primary" id="financeSheetDone">Готово</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="confirm-sheet" id="diaryDeleteConfirm" hidden>
+    <button type="button" class="confirm-sheet__backdrop" id="diaryDeleteBackdrop" aria-label="Закрыть"></button>
+    <div class="confirm-sheet__panel" role="alertdialog" aria-labelledby="diaryDeleteConfirmText">
+      <p class="confirm-sheet__text" id="diaryDeleteConfirmText">Удалить запись дневника за этот день?</p>
+      <div class="confirm-sheet__actions">
+        <button type="button" class="confirm-sheet__btn confirm-sheet__btn--no" id="diaryDeleteNo">Нет</button>
+        <button type="button" class="confirm-sheet__btn confirm-sheet__btn--yes" id="diaryDeleteYes">Да</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="finance-sheet" id="financeExportSheet" hidden>
+    <button type="button" class="finance-sheet__backdrop" id="financeExportBackdrop" aria-label="Закрыть"></button>
+    <div class="finance-sheet__panel" role="dialog" aria-labelledby="financeExportTitle">
+      <div class="finance-sheet__handle" aria-hidden="true"></div>
+      <div class="finance-sheet__head">
+        <p class="finance-sheet__title" id="financeExportTitle">Экспорт данных</p>
+        <button type="button" class="finance-sheet__close" id="financeExportClose" aria-label="Закрыть">×</button>
+      </div>
+      <p class="finance-sheet__label">Период</p>
+      <div class="segmented finance-export__period" role="tablist" aria-label="Период выгрузки">
+        <button type="button" class="segmented__btn is-active" data-finance-export-period="year" role="tab" aria-selected="true">Текущий год</button>
+        <button type="button" class="segmented__btn" data-finance-export-period="period" role="tab" aria-selected="false">Период</button>
+      </div>
+      <div class="finance-export__custom" id="financeExportCustom" hidden>
+        <div class="finance-sheet__date-row">
+          <span class="finance-sheet__date-label">От</span>
+          <button type="button" class="finance-sheet__date-btn" id="financeExportFromBtn" aria-expanded="false">—</button>
+        </div>
+        <div class="finance-sheet__date-row">
+          <span class="finance-sheet__date-label">До</span>
+          <button type="button" class="finance-sheet__date-btn" id="financeExportToBtn" aria-expanded="false">—</button>
+        </div>
+        <div class="finance-sheet__wheel-wrap" id="financeExportWheelWrap" hidden>
+          <div class="wheel-picker wheel-picker--compact" id="financeExportWheel">
+            <div class="wheel-picker__frame"></div>
+            <div class="wheel-col" id="financeExportWheelDay"></div>
+            <div class="wheel-col" id="financeExportWheelMonth"></div>
+            <div class="wheel-col" id="financeExportWheelYear"></div>
+          </div>
+        </div>
+      </div>
+      <button type="button" class="cta-btn cta-btn--inline finance-export__dl" id="financeExportDownload">Скачать Excel</button>
+    </div>
+  </div>
+
+  <div class="confirm-sheet" id="financeTxnDeleteConfirm" hidden>
+    <button type="button" class="confirm-sheet__backdrop" id="financeTxnDeleteBackdrop" aria-label="Закрыть"></button>
+    <div class="confirm-sheet__panel" role="alertdialog">
+      <p class="confirm-sheet__text">Удалить транзакцию?</p>
+      <div class="confirm-sheet__actions">
+        <button type="button" class="confirm-sheet__btn confirm-sheet__btn--no" id="financeTxnDeleteNo">Отмена</button>
+        <button type="button" class="confirm-sheet__btn confirm-sheet__btn--yes" id="financeTxnDeleteYes">Да, удалить</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="nutrition-sheet" id="nutritionQuickAddSheet" hidden>
+    <button type="button" class="nutrition-sheet__backdrop" id="nutritionSheetBackdrop" aria-label="Закрыть"></button>
+    <div class="nutrition-sheet__panel" role="dialog" aria-labelledby="nutritionSheetProductName">
+      <p class="nutrition-sheet__title" id="nutritionSheetProductName">—</p>
+      <div id="nutritionSheetMealBlock">
+        <p class="nutrition-sheet__label">Приём пищи</p>
+        <div class="segmented segmented--meals" id="nutritionSheetMeals" role="tablist" aria-label="Приём пищи"></div>
+      </div>
+      <div id="nutritionSheetCookBlock" hidden>
+        <p class="nutrition-sheet__label" id="nutritionSheetCookLabel">Как взвешиваешь</p>
+        <div class="segmented segmented--wrap segmented--cook" id="nutritionSheetCook" role="tablist" aria-label="Как взвешиваешь"></div>
+        <p class="nutrition-sheet__cook-hint" id="nutritionSheetCookHint" hidden></p>
+        <p class="nutrition-sheet__cook-preview" id="nutritionSheetCookPreview"></p>
+      </div>
+      <label class="field-label"><span id="nutritionSheetGramsLabel">Граммы</span>
+        <input class="field-input field-input--numeric" id="nutritionSheetGrams" type="text" inputmode="decimal" dir="ltr" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="например 120" />
+      </label>
+      <div id="nutritionSheetOilBlock" hidden>
+        <label class="field-label">Сколько грамм масла было добавлено
+          <input class="field-input field-input--numeric" id="nutritionSheetOil" type="text" inputmode="decimal" dir="ltr" autocomplete="off" placeholder="например 8" />
+        </label>
+      </div>
+      <button type="button" class="cta-btn" id="nutritionSheetSubmit">Добавить в день</button>
+    </div>
+  </div>
+
+  <div class="finance-sheet" id="ledgerAddCarSheet" hidden>
+    <button type="button" class="finance-sheet__backdrop" id="ledgerAddCarBackdrop" aria-label="Закрыть"></button>
+    <div class="finance-sheet__panel" role="dialog" aria-labelledby="ledgerAddCarTitle">
+      <div class="finance-sheet__handle" aria-hidden="true"></div>
+      <div class="finance-sheet__head">
+        <p class="finance-sheet__title" id="ledgerAddCarTitle">Новая машина</p>
+        <button type="button" class="finance-sheet__close" id="ledgerAddCarClose" aria-label="Закрыть">×</button>
+      </div>
+      <p class="ledger-add-car-sheet__hint">Техобслуживание и пробег настроите после создания.</p>
+      <label class="field-label">Название
+        <input class="field-input" id="ledgerAddCarName" type="text" data-keyboard="text" autocomplete="off" placeholder="например BMW X3" />
+      </label>
+      <button type="button" class="cta-btn cta-btn--inline" id="ledgerAddCarSave">Добавить</button>
+    </div>
+  </div>
+
+  <div class="finance-sheet" id="ledgerAllocSheet" hidden>
+    <button type="button" class="finance-sheet__backdrop" id="ledgerAllocBackdrop" aria-label="Закрыть"></button>
+    <div class="finance-sheet__panel" role="dialog" aria-labelledby="ledgerAllocTitle">
+      <div class="finance-sheet__handle" aria-hidden="true"></div>
+      <div class="finance-sheet__head">
+        <p class="finance-sheet__title" id="ledgerAllocTitle">Распределить</p>
+        <button type="button" class="finance-sheet__close" id="ledgerAllocClose" aria-label="Закрыть">×</button>
+      </div>
+      <p class="ledger-alloc-sheet__meta" id="ledgerAllocMeta"></p>
+      <label class="field-label">Объект
+        <select class="field-input" id="ledgerAllocAsset"></select>
+      </label>
+      <label class="field-label">Раздел
+        <select class="field-input" id="ledgerAllocBucket"></select>
+      </label>
+      <div id="ledgerAllocMortgageFields" hidden>
+        <label class="field-label">Тип платежа
+          <select class="field-input" id="ledgerAllocMortgageKind"></select>
+        </label>
+      </div>
+      <div id="ledgerAllocCarFields" hidden>
+        <div id="ledgerAllocConsumableFields" hidden>
+          <label class="field-label">Расходник
+            <select class="field-input" id="ledgerAllocConsumableSub"></select>
+          </label>
+        </div>
+        <div id="ledgerAllocServiceFields" hidden>
+          <label class="field-label">Узел
+            <select class="field-input" id="ledgerAllocServiceUnit"></select>
+          </label>
+          <label class="field-label">Тип работ
+            <select class="field-input" id="ledgerAllocServicePurpose"></select>
+          </label>
+        </div>
+      </div>
+      <label class="field-label">Сумма
+        <input class="field-input field-input--numeric" id="ledgerAllocAmount" type="text" inputmode="decimal" dir="ltr" autocomplete="off" autocorrect="off" spellcheck="false" />
+      </label>
+      <label class="field-label">Комментарий
+        <input class="field-input" id="ledgerAllocLabel" type="text" data-keyboard="text" autocomplete="off" placeholder="на что потрачено" />
+      </label>
+      <button type="button" class="cta-btn cta-btn--inline" id="ledgerAllocSave">Сохранить</button>
+    </div>
+  </div>
+
+  <script src="charts.js?v=20260708-finance-food-unified-color"></script>
+  <script src="finance.js?v=20260821-export-name"></script>
+  <script src="diary.js?v=20260817-diary-month-gap"></script>
+  <script src="ledger.js?v=20261012-tax-years-only"></script>
+  <script src="app.js?v=20260926-odometer-url"></script>
+</body>
+</html>

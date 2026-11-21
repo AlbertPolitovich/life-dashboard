@@ -1,0 +1,7 @@
+# Grey cloud (DNS only): HTTPS на origin через Let's Encrypt.
+# Порт 443 на Selectel свободен; VPN — на Amsterdam (194.135.20.35).
+# Не использовать вместе с CF Flexible + proxied (петля redirect).
+
+dash.svodbot.ru {
+	reverse_proxy 127.0.0.1:8765
+}

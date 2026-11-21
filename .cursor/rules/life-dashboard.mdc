@@ -1,0 +1,51 @@
+---
+description: "Life Dashboard — всегда сверяйся с context_bot_miniapp.md"
+alwaysApply: true
+---
+
+# Life Dashboard (Mini App)
+
+Перед **каждой** задачей по этому репо:
+
+1. Прочитай **`.cursor/context_bot_miniapp.md`** (главный источник правды по Mini App).
+2. Подключи узкий модульный context только если трогаешь эту область:
+   - КБЖУ → `context_bot_kbju.md` (+ при переносе из 28kcal: `context_deploy.md`)
+   - Финансы → `context_bot_finance.md`
+   - Дневник → `context_bot_diary.md`
+   - Ledger → `context_bot_ledger.md`
+   - VPN → `context_bot_freakingWG.md`
+   - UI-паттерны → `context_visualization_*.md`
+3. При конфликте документов: **сначала** `context_bot_miniapp.md`, затем более новый по дате/mtime файла или фактический код (`mini-app/index.html` cache-bust, `api/`).
+
+После **значимого** изменения (поведение UI, API, миграция, деплой, принятое решение, багфикс «не откатывать»):
+
+- Обнови `.cursor/context_bot_miniapp.md` (кратко: что сделано, cache `?v=`, запреты).
+- При необходимости — модульный `context_bot_*.md` той же области.
+- Команды «деплой» / «деплой лд» — см. `.cursor/rules/deploy-selectel.mdc` и `deploy-ld-kbju.mdc` (не дублировать здесь).
+
+## Стек (кратко)
+
+- UI: `mini-app/` (ванильный JS/CSS/HTML + Chart.js + Telegram WebApp).
+- API: FastAPI `api/` · порт `8765` · Postgres.
+- Прод: **только Selectel** `161.104.47.52` · `https://dash.svodbot.ru/mini-app/`.
+- Локально: `docker compose up -d` → `cd api && ./run.sh`.
+- Деплой кода: `./deploy/deploy-dual.sh selectel`. После UI — bump `?v=` в `mini-app/index.html`.
+- Продукт **стабильно в проде**; доработки — по нужде, не «добить очередь».
+
+## Стиль кода
+
+- Минимальный diff; не переписывать модули «с нуля».
+- Пояснения пользователю — коротко и простыми словами (не программист).
+- Секреты (`.env`, токены, пароли) в чат **не** выводить — только путь к файлу.
+- Ответы и контекст-доки — на русском, если пользователь так пишет.
+- Эталон UI финансов = **прод / текущий код** (`mini-app/finance.js`), не canvas-мокап.
+
+## Ключевые запреты
+
+- Не трогать Amsterdam / WG / dual-API на NL «на всякий».
+- Не трогать `fitbite28` / порт `8766` / Pro-воронку 28kcal в LD.
+- Не менять цифры КБЖУ-таргетов без явной просьбы.
+- Не TRUNCATE/CASCADE каталог `food`↔`products`.
+- Не git push на remote и не миграции БД без явной просьбы.
+- Не откатывать блоки, помеченные в context как «не откатывать».
+- Sheets-бот `bot/` + корневой `index.html` + Apps Script — **legacy**, не для ежедневной работы Mini App.

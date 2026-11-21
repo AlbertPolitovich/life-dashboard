@@ -1,0 +1,9 @@
+# Cloudflare Flexible SSL: HTTPS на edge, origin — HTTP :80.
+# Порт 443 на VPS занят VPN (Amnezia), Caddy его не трогает.
+{
+	auto_https off
+}
+
+http://dash.svodbot.ru {
+	reverse_proxy 127.0.0.1:8765
+}

@@ -1,0 +1,18 @@
+[Unit]
+Description=Life Dashboard SQL Telegram bot
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=lifebot
+Group=lifebot
+WorkingDirectory=/opt/life-dashboard/!bot_SQL
+EnvironmentFile=/opt/life-dashboard/!bot_SQL/.env.sql
+Environment=TZ=Europe/Moscow
+ExecStart=/opt/life-dashboard/bot/.venv/bin/python main_sql.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

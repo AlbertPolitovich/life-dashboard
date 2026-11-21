@@ -1,0 +1,45 @@
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+bot/.venv/
+
+# Secrets / env (examples OK)
+.env
+.env.*
+!.env.example
+!**/.env.example
+!**/.env.sql.example
+api/.env
+bot/.env
+# папка буквально называется !bot_SQL
+\!bot_SQL/.env.sql
+
+# Local bot state
+bot/notification_settings.json
+
+# DB dumps / backups
+db/backups/*.sql
+db/backups/*.dump
+db/backups/*.gz
+*.sql.gz
+
+# VPN / Amnezia / Xray client material (keys, import URIs)
+deploy/*.vless
+deploy/*.vpn
+deploy/amsterdam-xray-import.json
+deploy/amnezia-xray-client.txt
+deploy/amnezia-xray/
+deploy/ru-nl-vpn/*.conf
+*.pem
+*.key
+*.p12

@@ -1,0 +1,13 @@
+# Amsterdam · только VPN-путь (dnsmasq: dash.svodbot.ru → 10.0.0.1).
+# Сертификаты копируются с Selectel: deploy/sync-certs-to-amsterdam.sh
+# Публичный DNS dash.svodbot.ru → Selectel (без VPN).
+
+{
+	auto_https off
+}
+
+https://dash.svodbot.ru {
+	bind 10.0.0.1
+	tls /etc/caddy/certs/dash.svodbot.ru.crt /etc/caddy/certs/dash.svodbot.ru.key
+	reverse_proxy 127.0.0.1:8765
+}

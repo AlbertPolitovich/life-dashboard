@@ -1,0 +1,25 @@
+---
+description: "деплой / deploy — простой деплой life-dashboard на Selectel"
+alwaysApply: true
+---
+
+# Деплой (Selectel)
+
+Когда пользователь пишет **«деплой»** или **«deploy»** (без «лд» / «LD») — залить текущий код на Selectel.
+
+## Шаги
+
+1. Если менялся UI (`mini-app/*`) и ещё нет свежего cache-bust — bump `?v=` у `app.js` / `styles.css` в `mini-app/index.html`.
+2. Запустить из корня репо:
+   ```bash
+   ./deploy/deploy-dual.sh selectel
+   ```
+3. Проверить: `ssh root@161.104.47.52 'systemctl is-active life-dashboard-api'` → `active`.
+4. Коротко отчитаться (что залилось, API жив).
+
+## Не делать
+
+- Amsterdam / WG / dual deploy
+- Миграции БД «на всякий» — только если пользователь явно просит
+- Git commit / push без явной просьбы
+- Трогать `fitbite28` / порт `8766`

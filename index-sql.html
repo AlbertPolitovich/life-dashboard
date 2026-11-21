@@ -1,0 +1,668 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Routine/Sport (SQL)</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f6f7fb; }
+    .toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+    .toolbar label { font-weight: 600; }
+    #monthSelect { padding: 6px 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 14px; }
+    #monthBadge {
+      display: none;
+      padding: 4px 12px;
+      border-radius: 999px;
+      background: #e8f5e9;
+      color: #2e7d32;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    #monthBadge.visible { display: inline-block; }
+    .card { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.06); margin-bottom: 12px; }
+    #status { color: #555; margin-bottom: 8px; }
+    #lastSuccess { color: #2e7d32; margin-bottom: 8px; }
+    #kpi { font-weight: 700; margin-bottom: 12px; }
+    .split-50 {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      align-items: flex-start;
+    }
+    .col-routine, .col-sport, .col-sport-type, .col-radar {
+      flex: 1 1 calc(50% - 10px);
+      min-width: 240px;
+    }
+    .col-routine h3, .col-sport h3, .col-sport-type h3, .col-radar h3 { margin-top: 0; }
+    .donut-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px 12px;
+      justify-content: flex-start;
+      margin-top: 4px;
+    }
+    .donut-cell {
+      width: 92px;
+      text-align: center;
+    }
+    .donut-cell .donut-canvas-wrap {
+      height: 88px;
+      margin: 0 auto 6px;
+      position: relative;
+    }
+    .donut-cell canvas { max-width: 100%; max-height: 100%; }
+    .donut-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: #333;
+      line-height: 1.25;
+      word-break: break-word;
+    }
+    .donut-stat {
+      font-size: 11px;
+      color: #666;
+      margin-top: 2px;
+    }
+    .type-metric-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      gap: 18px 24px;
+      margin-top: 4px;
+    }
+    .type-metric-column {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    .type-metric-column .donut-cell {
+      width: 100px;
+    }
+    .type-metric-column .donut-cell .donut-canvas-wrap {
+      height: 96px;
+    }
+    .type-metric-column .type-stat-card {
+      min-width: 100px;
+      max-width: 140px;
+      padding: 12px 14px;
+    }
+    .type-stat-card {
+      flex: 0 1 auto;
+      min-width: 118px;
+      max-width: 160px;
+      padding: 14px 18px;
+      border-radius: 16px;
+      text-align: center;
+      background: linear-gradient(145deg, #f8fafc 0%, #eef2f7 100%);
+      border: 1px solid #cfd8dc;
+      box-shadow: 0 2px 10px rgba(55, 71, 79, 0.08);
+    }
+    .type-stat-card .stat-value {
+      font-size: 32px;
+      font-weight: 700;
+      line-height: 1.1;
+      color: #263238;
+      letter-spacing: -0.02em;
+    }
+    .type-stat-card .stat-label {
+      margin-top: 8px;
+      font-size: 11px;
+      font-weight: 600;
+      line-height: 1.35;
+      color: #546e7a;
+    }
+    .radar-chart-host {
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+    }
+    @media (max-width: 640px) {
+      .col-routine, .col-sport, .col-sport-type, .col-radar { flex: 1 1 100%; }
+    }
+  </style>
+</head>
+<body>
+  <h2>Routine/Sport (SQL)</h2>
+
+  <div class="toolbar">
+    <label for="monthSelect">Месяц</label>
+    <select id="monthSelect" aria-label="Выбор месяца"></select>
+    <span id="monthBadge" class="visible">Текущий месяц</span>
+  </div>
+
+  <div id="status"></div>
+  <div id="lastSuccess"></div>
+
+  <div class="card card-routine-sport">
+    <div class="split-50">
+      <div class="col-routine">
+        <h3>Routine</h3>
+        <div id="kpi"></div>
+        <div id="sphereDonuts" class="donut-grid" aria-label="Прогресс по сферам"></div>
+      </div>
+      <div class="col-sport">
+        <h3>Sport by min</h3>
+        <div id="sportKpi"></div>
+        <div id="sportDonuts" class="donut-grid" aria-label="Прогресс по спорту"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card card-type-radar">
+    <div class="split-50">
+      <div class="col-sport-type">
+        <h3>Sport by type</h3>
+        <div id="sportTypeRow" class="type-metric-row" aria-label="Спорт по типу"></div>
+      </div>
+      <div class="col-radar">
+        <h3>Radar chart</h3>
+        <div class="radar-chart-host">
+          <canvas id="radarChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // С uvicorn (порт 8765) — относительный URL; с python -m http.server:8080 — абсолютный
+    const API_URL =
+      location.port === "8765" ? "/month" : "http://127.0.0.1:8765/month";
+
+    const MONTH_OPTIONS = [
+      { key: "2026-12", label: "Декабрь 2026" },
+      { key: "2026-11", label: "Ноябрь 2026" },
+      { key: "2026-10", label: "Октябрь 2026" },
+      { key: "2026-09", label: "Сентябрь 2026" },
+      { key: "2026-08", label: "Август 2026" },
+      { key: "2026-07", label: "Июль 2026" },
+      { key: "2026-06", label: "Июнь 2026" },
+      { key: "2026-05", label: "Май 2026" },
+      { key: "2026-04", label: "Апрель 2026" },
+      { key: "2026-03", label: "Март 2026" },
+      { key: "2026-02", label: "Февраль 2026" },
+      { key: "2026-01", label: "Январь 2026" },
+    ];
+
+    const sphereDonutCharts = [];
+    const sportDonutCharts = [];
+    const sportTypeDonutCharts = [];
+    let radarChart = null;
+
+    function destroyChartList(list) {
+      while (list.length) {
+        const c = list.pop();
+        try {
+          c.destroy();
+        } catch (err) {
+          /* ignore */
+        }
+      }
+    }
+
+    function currentMonthKey() {
+      const d = new Date();
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      return `${y}-${m}`;
+    }
+
+    function buildMonthUI() {
+      const sel = document.getElementById("monthSelect");
+      sel.innerHTML = MONTH_OPTIONS.map(
+        (o) => `<option value="${o.key}">${o.label}</option>`
+      ).join("");
+
+      const cm = currentMonthKey();
+      const hasCurrent = MONTH_OPTIONS.some((o) => o.key === cm);
+      if (hasCurrent) sel.value = cm;
+      else if (MONTH_OPTIONS.length) sel.value = MONTH_OPTIONS[0].key;
+
+      sel.addEventListener("change", () => {
+        updateMonthBadge();
+        loadData();
+      });
+      updateMonthBadge();
+    }
+
+    function updateMonthBadge() {
+      const key = document.getElementById("monthSelect").value;
+      const badge = document.getElementById("monthBadge");
+      const isCurrent = key === currentMonthKey();
+      badge.classList.toggle("visible", isCurrent);
+      badge.textContent = "Текущий месяц";
+    }
+
+    function apiUrlForMonth() {
+      const key = document.getElementById("monthSelect").value;
+      const base = API_URL.split("?")[0];
+      const sep = base.includes("?") ? "&" : "?";
+      return `${base}${sep}month=${encodeURIComponent(key)}`;
+    }
+
+    function getProgressColor(p) {
+      if (p >= 100) return "#2e7d32";
+      if (p >= 50) return "#f9a825";
+      return "#c62828";
+    }
+
+    function saveLastSuccess() {
+      const ts = new Date().toLocaleString();
+      localStorage.setItem("life_dashboard_last_success", ts);
+      renderLastSuccess();
+    }
+
+    function renderLastSuccess() {
+      const ts = localStorage.getItem("life_dashboard_last_success");
+      const el = document.getElementById("lastSuccess");
+      el.textContent = ts ? `Последнее успешное обновление: ${ts}` : "";
+    }
+
+    function donutDataForPercent(progressRaw) {
+      const pr = Number(progressRaw) || 0;
+      const arc = Math.min(Math.max(pr, 0), 100);
+      const colorKey = pr >= 100 ? 100 : pr;
+      const fill = getProgressColor(colorKey);
+      const track = "#eceff1";
+      return {
+        datasets: [
+          {
+            data: arc >= 100 ? [100, 0] : [arc, 100 - arc],
+            backgroundColor: [fill, track],
+            borderWidth: 0,
+            hoverOffset: 0,
+          },
+        ],
+      };
+    }
+
+    function miniDonutOptions() {
+      return {
+        type: "doughnut",
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          aspectRatio: 1,
+          cutout: "70%",
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              filter: (item) => item.dataIndex === 0,
+              callbacks: {
+                label(ctx) {
+                  const v = ctx.raw;
+                  return ` ${Math.round(v * 10) / 10}%`;
+                },
+              },
+            },
+          },
+        },
+      };
+    }
+
+    function renderSphereDonuts(rows) {
+      const host = document.getElementById("sphereDonuts");
+      destroyChartList(sphereDonutCharts);
+      host.innerHTML = "";
+
+      rows.forEach((r) => {
+        const pr = Number(r.progress) || 0;
+        const cell = document.createElement("div");
+        cell.className = "donut-cell";
+        const wrap = document.createElement("div");
+        wrap.className = "donut-canvas-wrap";
+        const cv = document.createElement("canvas");
+        cv.setAttribute("role", "img");
+        cv.setAttribute("aria-label", `${r.sphere}: ${r.fact}/${r.goal} (${pr}%)`);
+        wrap.appendChild(cv);
+        cell.appendChild(wrap);
+        const name = document.createElement("div");
+        name.className = "donut-name";
+        name.textContent = r.sphere;
+        cell.appendChild(name);
+        const st = document.createElement("div");
+        st.className = "donut-stat";
+        st.textContent = `${r.fact}/${r.goal} (${pr}%)`;
+        cell.appendChild(st);
+        host.appendChild(cell);
+
+        const chart = new Chart(cv, {
+          ...miniDonutOptions(),
+          data: donutDataForPercent(pr),
+        });
+        sphereDonutCharts.push(chart);
+      });
+    }
+
+    function renderDonutGrid(hostEl, chartList, items, opts) {
+      destroyChartList(chartList);
+      hostEl.innerHTML = "";
+
+      items.forEach((item) => {
+        const pr = Number(item.progress) || 0;
+        const name =
+          (item.shortLabel && String(item.shortLabel).trim()) ||
+          String(item.label || "").trim();
+        const statText =
+          typeof opts.statText === "function"
+            ? opts.statText(item)
+            : `${item.fact}/${item.goal} (${pr}%)`;
+
+        const cell = document.createElement("div");
+        cell.className = "donut-cell";
+        const wrap = document.createElement("div");
+        wrap.className = "donut-canvas-wrap";
+        const cv = document.createElement("canvas");
+        cv.setAttribute("role", "img");
+        cv.setAttribute("aria-label", `${name}: ${statText}`);
+        wrap.appendChild(cv);
+        cell.appendChild(wrap);
+        const nameEl = document.createElement("div");
+        nameEl.className = "donut-name";
+        nameEl.textContent = name;
+        cell.appendChild(nameEl);
+        const st = document.createElement("div");
+        st.className = "donut-stat";
+        st.textContent = statText;
+        cell.appendChild(st);
+        hostEl.appendChild(cell);
+
+        chartList.push(
+          new Chart(cv, {
+            ...miniDonutOptions(),
+            data: donutDataForPercent(pr),
+          })
+        );
+      });
+    }
+
+    function renderSportDonuts(sport) {
+      const host = document.getElementById("sportDonuts");
+      destroyChartList(sportDonutCharts);
+      host.innerHTML = "";
+
+      if (!sport || typeof sport.totalMinutes !== "number") {
+        return;
+      }
+
+      const cols = Array.isArray(sport.byMinColumn) ? sport.byMinColumn : [];
+      cols.forEach((c) => {
+        const pr = Number(c.progress) || 0;
+        const m = Number(c.minutes) || 0;
+        const gPart = Number(c.goalPart) || 0;
+        const short =
+          (c.shortLabel && String(c.shortLabel).trim()) ||
+          String(c.label || "")
+            .replace(/, min$/i, "")
+            .trim();
+
+        const cell = document.createElement("div");
+        cell.className = "donut-cell";
+        const wrap = document.createElement("div");
+        wrap.className = "donut-canvas-wrap";
+        const cv = document.createElement("canvas");
+        cv.setAttribute("role", "img");
+        cv.setAttribute("aria-label", `${short}: ${m}/${gPart} мин (${pr}%)`);
+        wrap.appendChild(cv);
+        cell.appendChild(wrap);
+        const name = document.createElement("div");
+        name.className = "donut-name";
+        name.textContent = short;
+        cell.appendChild(name);
+        const st = document.createElement("div");
+        st.className = "donut-stat";
+        st.textContent = `${m}/${gPart} мин (${pr}%)`;
+        cell.appendChild(st);
+        host.appendChild(cell);
+
+        const chart = new Chart(cv, {
+          ...miniDonutOptions(),
+          data: donutDataForPercent(pr),
+        });
+        sportDonutCharts.push(chart);
+      });
+    }
+
+    function renderSport(sport) {
+      const kpiEl = document.getElementById("sportKpi");
+
+      if (!sport || typeof sport.totalMinutes !== "number") {
+        kpiEl.textContent = "Спорт: данных нет (ожидается объект sport в API).";
+        kpiEl.style.color = "#666";
+        destroyChartList(sportDonutCharts);
+        document.getElementById("sportDonuts").innerHTML = "";
+        return;
+      }
+
+      const goal = Number(sport.goalTotalMinutes != null ? sport.goalTotalMinutes : sport.goalMinutes) || 0;
+      const total = Number(sport.totalMinutes) || 0;
+      const pTotal =
+        typeof sport.progress === "number"
+          ? sport.progress
+          : goal > 0
+            ? Math.round((total / goal) * 1000) / 10
+            : 0;
+      const col = getProgressColor(pTotal);
+
+      const title = sport.monthTitle || "";
+      kpiEl.textContent = `Итог ${title}: ${total} / ${goal} (${pTotal}%)`;
+      kpiEl.style.color = col;
+
+      renderSportDonuts(sport);
+    }
+
+    function isExcludedTypePill(p) {
+      const label = String(p.label || p.shortLabel || "").toLowerCase();
+      const val = String(p.value || "");
+      return (
+        label.includes("pace") ||
+        /^wt\b/.test(label) ||
+        label.includes("вес") ||
+        /1899-12-30/.test(val)
+      );
+    }
+
+    function formatTypePillValue(p) {
+      let v = p.value != null ? String(p.value).trim() : "";
+      if (v === "") return "—";
+      if (p.key === "hrCycling" || /cycling.*avr/i.test(p.label || "")) {
+        const n = Number(v);
+        if (!isNaN(n)) return String(Math.round(n));
+      }
+      return v;
+    }
+
+    function pillMap_(pills) {
+      const list = (pills || []).filter((p) => !isExcludedTypePill(p));
+      const map = {};
+      list.forEach((p) => {
+        if (p.key) map[p.key] = p;
+      });
+      const find = (re) =>
+        list.find((p) => re.test(String(p.label || p.shortLabel || "")));
+      if (!map.hrRunning) {
+        const p = find(/heart\s*rate\s*running|running.*avr|пульс.*бег/i);
+        if (p) map.hrRunning = p;
+      }
+      if (!map.hrCycling) {
+        const p = find(/heart\s*rate\s*cycling|cycling.*avr|пульс.*вел/i);
+        if (p) map.hrCycling = p;
+      }
+      return map;
+    }
+
+    function appendTypeDonut(parent, chartList, item) {
+      const pr = Number(item.progress) || 0;
+      const f = Number(item.fact) || 0;
+      const g = Number(item.goal) || 0;
+      const name =
+        (item.shortLabel && String(item.shortLabel).trim()) ||
+        String(item.label || "").trim();
+      const statText = `${f}/${g} (${pr}%)`;
+
+      const cell = document.createElement("div");
+      cell.className = "donut-cell";
+      const wrap = document.createElement("div");
+      wrap.className = "donut-canvas-wrap";
+      const cv = document.createElement("canvas");
+      cv.setAttribute("role", "img");
+      cv.setAttribute("aria-label", `${name}: ${statText}`);
+      wrap.appendChild(cv);
+      cell.appendChild(wrap);
+      const nameEl = document.createElement("div");
+      nameEl.className = "donut-name";
+      nameEl.textContent = name;
+      cell.appendChild(nameEl);
+      const st = document.createElement("div");
+      st.className = "donut-stat";
+      st.textContent = statText;
+      cell.appendChild(st);
+      parent.appendChild(cell);
+
+      chartList.push(
+        new Chart(cv, {
+          ...miniDonutOptions(),
+          data: donutDataForPercent(pr),
+        })
+      );
+    }
+
+    function appendTypeColumn(host, chartList, item, pill) {
+      const col = document.createElement("div");
+      col.className = "type-metric-column";
+      appendTypeDonut(col, chartList, item);
+      if (pill) appendTypeStatCard(col, pill);
+      host.appendChild(col);
+    }
+
+    function appendTypeStatCard(host, pill) {
+      const label =
+        (pill.shortLabel && String(pill.shortLabel).trim()) ||
+        String(pill.label || "").trim();
+      const val = formatTypePillValue(pill);
+      const card = document.createElement("div");
+      card.className = "type-stat-card";
+      card.innerHTML = `<div class="stat-value">${val}</div><div class="stat-label">${label}</div>`;
+      host.appendChild(card);
+    }
+
+    function renderSportByType(sportByType) {
+      const host = document.getElementById("sportTypeRow");
+
+      if (!sportByType || !Array.isArray(sportByType.byTypeColumn)) {
+        destroyChartList(sportTypeDonutCharts);
+        host.innerHTML = "";
+        return;
+      }
+
+      destroyChartList(sportTypeDonutCharts);
+      host.innerHTML = "";
+
+      const cols = sportByType.byTypeColumn;
+      const pmap = pillMap_(sportByType.statPills);
+
+      if (cols[0]) appendTypeColumn(host, sportTypeDonutCharts, cols[0], pmap.hrRunning);
+      if (cols[1]) appendTypeColumn(host, sportTypeDonutCharts, cols[1], pmap.hrCycling);
+    }
+
+    function renderProgress(rows, monthLabel) {
+      const totalFact = rows.reduce((s, r) => s + (Number(r.fact) || 0), 0);
+      const totalGoal = rows.reduce((s, r) => s + (Number(r.goal) || 0), 0);
+      const totalPercent = totalGoal > 0 ? Math.round((totalFact / totalGoal) * 100) : 0;
+
+      const kpi = document.getElementById("kpi");
+      const suffix = monthLabel ? ` (${monthLabel})` : "";
+      kpi.textContent = `Общий прогресс${suffix}: ${totalFact}/${totalGoal} (${totalPercent}%)`;
+      kpi.style.color = getProgressColor(totalPercent);
+
+      renderSphereDonuts(rows);
+    }
+
+    async function loadData() {
+      const statusEl = document.getElementById("status");
+
+      try {
+        statusEl.textContent = "Запрос к API...";
+        const url = apiUrlForMonth();
+        const res = await fetch(url, { cache: "no-store" });
+        const data = await res.json();
+
+        if (!data.ok || !Array.isArray(data.rows)) {
+          const msg = data.error || "Неверный ответ API";
+          throw new Error(msg);
+        }
+
+        const rows = data.rows;
+        const sel = document.getElementById("monthSelect");
+        const opt = MONTH_OPTIONS.find((o) => o.key === sel.value);
+        const monthLabel = opt ? opt.label : data.month || sel.value;
+
+        renderProgress(rows, monthLabel);
+        renderSport(data.sport);
+        renderSportByType(data.sportByType);
+
+        const labels = rows.map((r) => r.sphere);
+        const ratio = rows.map((r) => {
+          const f = Number(r.fact) || 0;
+          const g = Number(r.goal) || 0;
+          return g > 0 ? Math.min(f / g, 1) : 0;
+        });
+
+        if (radarChart) radarChart.destroy();
+        radarChart = new Chart(document.getElementById("radarChart"), {
+          type: "radar",
+          data: {
+            labels,
+            datasets: [
+              {
+                label: "Факт/Цель",
+                data: ratio,
+                fill: true,
+                backgroundColor: "rgba(78,121,167,0.2)",
+                borderColor: "#4e79a7",
+                pointBackgroundColor: "#4e79a7",
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            aspectRatio: 1,
+            plugins: {
+              legend: { display: true, position: "bottom", labels: { boxWidth: 10, font: { size: 11 } } },
+            },
+            scales: {
+              r: {
+                min: 0,
+                max: 1,
+                ticks: { stepSize: 0.2, font: { size: 10 } },
+                pointLabels: { font: { size: 10 } },
+              },
+            },
+          },
+        });
+
+        statusEl.textContent = "";
+        saveLastSuccess();
+      } catch (e) {
+        statusEl.textContent = "Ошибка API: " + e.message;
+        console.error(e);
+        destroyChartList(sphereDonutCharts);
+        document.getElementById("sphereDonuts").innerHTML = "";
+        renderSport(null);
+        renderSportByType(null);
+        if (radarChart) {
+          radarChart.destroy();
+          radarChart = null;
+        }
+      }
+    }
+
+    buildMonthUI();
+    renderLastSuccess();
+    loadData();
+    setInterval(loadData, 30000);
+  </script>
+</body>
+</html>

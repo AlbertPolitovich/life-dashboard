@@ -1,0 +1,21 @@
+# Postgres на VPS: порт только localhost (не светить в интернет).
+# Скопировать на сервер: deploy/docker-compose.vps.yml → /opt/life-dashboard/docker-compose.yml
+# Перед копированием заменить POSTGRES_PASSWORD.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: life_dashboard_pg
+    environment:
+      POSTGRES_USER: lifeapp
+      POSTGRES_PASSWORD: CHANGE_ME_BEFORE_COPY
+      POSTGRES_DB: life_dashboard
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - life_dashboard_pg_data:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    restart: unless-stopped
+
+volumes:
+  life_dashboard_pg_data:
