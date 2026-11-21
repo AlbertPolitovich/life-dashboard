@@ -10,9 +10,24 @@
   <meta name="apple-mobile-web-app-title" content="LD" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script>
+    /* Safari/PWA: не тянем telegram.org (вне TG). В Telegram — sync, как раньше. */
+    (function () {
+      var ua = navigator.userAgent || "";
+      var href = location.href || "";
+      var needTg =
+        /Telegram/i.test(ua) ||
+        /[?&#]tgWebAppData=/.test(href) ||
+        /[?&#]tgWebAppStartParam=/.test(href);
+      if (needTg) {
+        document.write(
+          '<script src="https://telegram.org/js/telegram-web-app.js"><\/script>'
+        );
+      }
+    })();
+  </script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <link rel="stylesheet" href="styles.css?v=20261121-safari-pwa" />
+  <link rel="stylesheet" href="styles.css?v=20261121-safari-phone-fix" />
 </head>
 <body>
   <div class="web-login" id="webLoginGate" hidden>
@@ -797,6 +812,6 @@
   <script src="finance.js?v=20260821-export-name"></script>
   <script src="diary.js?v=20260817-diary-month-gap"></script>
   <script src="ledger.js?v=20261012-tax-years-only"></script>
-  <script src="app.js?v=20261121-safari-pwa"></script>
+  <script src="app.js?v=20261121-safari-phone-fix"></script>
 </body>
 </html>

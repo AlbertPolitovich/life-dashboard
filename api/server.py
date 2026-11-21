@@ -248,6 +248,9 @@ def _extract_init_data(request: Request) -> str:
 def _requires_auth(path: str) -> bool:
     if path == "/favicon.ico":
         return False
+    # Bare host → redirect to mini-app (login), not stealth 404.
+    if path == "/":
+        return False
     # Static mini-app shell must be reachable so Telegram WebView / Safari can boot JS.
     # Sensitive data remains protected at API endpoints below.
     if path.startswith("/mini-app"):
@@ -319,9 +322,16 @@ def db_conn():
 
 
 @app.get("/")
+def root_to_mini_app():
+    """Safari открывает хост без /mini-app/ — ведём на вход, не на stealth 404."""
+    from fastapi.responses import RedirectResponse
+
+    return RedirectResponse(url="/mini-app/", status_code=302)
+
+
 @app.get("/index-sql.html")
 def dashboard():
-    """Дашборд с того же origin, что и /month — без CORS."""
+    """Legacy SQL-дашборд (за auth gate)."""
     return FileResponse(REPO_ROOT / "index-sql.html")
 
 

@@ -5236,34 +5236,40 @@ function telegramPrefersWindowed() {
 
 function initTelegram() {
   const w = window.Telegram?.WebApp;
-  if (!w) return;
+  // Вне Telegram объект WebApp иногда есть, но без initData — не трогаем (ломает Safari).
+  if (!w || !w.initData) return;
   tg = w;
-  tg.ready();
-  tg.expand();
-  if (typeof tg.disableVerticalSwipes === "function") tg.disableVerticalSwipes();
-  if (telegramPrefersWindowed()) {
-    if (tg.isFullscreen && typeof tg.exitFullscreen === "function") {
+  try {
+    tg.ready();
+    tg.expand();
+    if (typeof tg.disableVerticalSwipes === "function") tg.disableVerticalSwipes();
+    if (telegramPrefersWindowed()) {
+      if (tg.isFullscreen && typeof tg.exitFullscreen === "function") {
+        try {
+          tg.exitFullscreen();
+        } catch {
+          /* optional Bot API 8.0+ */
+        }
+      }
+    } else if (tg.isVersionAtLeast?.("8.0") && typeof tg.requestFullscreen === "function") {
       try {
-        tg.exitFullscreen();
+        tg.requestFullscreen();
       } catch {
         /* optional Bot API 8.0+ */
       }
     }
-  } else if (tg.isVersionAtLeast?.("8.0") && typeof tg.requestFullscreen === "function") {
-    try {
-      tg.requestFullscreen();
-    } catch {
-      /* optional Bot API 8.0+ */
-    }
+    applyThemeFromTelegram();
+    applyTelegramSafeArea();
+    tg.onEvent?.("themeChanged", applyThemeFromTelegram);
+    tg.onEvent?.("safeAreaChanged", applyTelegramSafeArea);
+    tg.onEvent?.("contentSafeAreaChanged", applyTelegramSafeArea);
+    tg.onEvent?.("fullscreenChanged", applyTelegramSafeArea);
+    if (tg.BackButton?.onClick) tg.BackButton.onClick(navigateBack);
+    syncTelegramBackButton();
+  } catch {
+    /* Safari / битый WebApp stub — продолжаем cookie-входом */
+    tg = null;
   }
-  applyThemeFromTelegram();
-  applyTelegramSafeArea();
-  tg.onEvent?.("themeChanged", applyThemeFromTelegram);
-  tg.onEvent?.("safeAreaChanged", applyTelegramSafeArea);
-  tg.onEvent?.("contentSafeAreaChanged", applyTelegramSafeArea);
-  tg.onEvent?.("fullscreenChanged", applyTelegramSafeArea);
-  if (tg.BackButton?.onClick) tg.BackButton.onClick(navigateBack);
-  syncTelegramBackButton();
 }
 
 function applyTelegramSafeArea() {
