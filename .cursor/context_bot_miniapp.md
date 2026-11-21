@@ -22,6 +22,7 @@
 | Локально | `docker compose up -d` (юзер `life`/`life`) → `cd api && ./run.sh` → http://127.0.0.1:8765/mini-app/ |
 | Сборка | **нет** `package.json` / npm — статика + Python |
 | Env | `api/.env.example` (`DATABASE_URL=…`) · секреты в `api/.env`, `bot/.env`, `!bot_SQL/.env.sql` (**не читать в чат**) |
+| GitHub | https://github.com/AlbertPolitovich/life-dashboard · remote `origin` (SSH) · после коммита — `git push` (не MCP) |
 
 ```bash
 ./deploy/deploy-dual.sh selectel   # код

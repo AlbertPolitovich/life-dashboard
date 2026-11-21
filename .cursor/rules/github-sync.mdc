@@ -1,0 +1,21 @@
+---
+description: "После правок — push в GitHub AlbertPolitovich/life-dashboard"
+alwaysApply: true
+---
+
+# GitHub sync (Life Dashboard)
+
+Remote: `origin` → `git@github.com:AlbertPolitovich/life-dashboard.git`  
+URL: https://github.com/AlbertPolitovich/life-dashboard
+
+## После каждой значимой правки (когда уже есть commit)
+
+1. Убедись, что секреты не в коммите (`api/.env`, токены, пароли).
+2. `git push -u origin HEAD` (ветка feature) **или** на `main`: `git push origin main`.
+3. Не ждать MCP `cursor-github` / `Github` — на этой машине они **не логинятся** («No sign-in link»). Пуш через **git + SSH** (`AlbertPolitovich`).
+
+## Не делать
+
+- Force-push на `main` без явной просьбы пользователя.
+- Коммитить `.env` / секреты.
+- Полагаться на MCP GitHub для синка — он здесь сломан; git remote уже настроен.

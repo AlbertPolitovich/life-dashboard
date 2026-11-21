@@ -46,6 +46,7 @@ alwaysApply: true
 - Не трогать `fitbite28` / порт `8766` / Pro-воронку 28kcal в LD.
 - Не менять цифры КБЖУ-таргетов без явной просьбы.
 - Не TRUNCATE/CASCADE каталог `food`↔`products`.
-- Не git push на remote и не миграции БД без явной просьбы.
+- Миграции БД — только по явной просьбе.
+- GitHub: после коммита пушить в `origin` (см. `.cursor/rules/github-sync.mdc`); MCP GitHub на этой машине не использовать.
 - Не откатывать блоки, помеченные в context как «не откатывать».
 - Sheets-бот `bot/` + корневой `index.html` + Apps Script — **legacy**, не для ежедневной работы Mini App.
