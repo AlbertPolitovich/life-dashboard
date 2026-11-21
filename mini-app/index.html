@@ -4,11 +4,28 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover, interactive-widget=overlays-content" />
   <title>Life Dashboard</title>
+  <meta name="theme-color" content="#3685bf" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="LD" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <link rel="stylesheet" href="styles.css?v=20261012-transport-tax" />
+  <link rel="stylesheet" href="styles.css?v=20261121-safari-pwa" />
 </head>
 <body>
+  <div class="web-login" id="webLoginGate" hidden>
+    <div class="web-login__card">
+      <p class="web-login__title">Life Dashboard</p>
+      <p class="web-login__hint">Введи ключ доступа один раз — дальше вход сохранится в этом браузере.</p>
+      <label class="web-login__label" for="webLoginKey">Ключ
+        <input class="field-input" id="webLoginKey" type="password" autocomplete="current-password" enterkeyhint="go" />
+      </label>
+      <p class="web-login__error" id="webLoginError" hidden></p>
+      <button type="button" class="cta-btn cta-btn--inline" id="webLoginSubmit">Войти</button>
+    </div>
+  </div>
   <header class="app-header" id="appHeader">
     <button type="button" class="app-header__back" id="headerBack" hidden aria-label="Назад">‹</button>
     <span class="app-header__title" id="headerTitle">Life Dashboard</span>
@@ -780,6 +797,6 @@
   <script src="finance.js?v=20260821-export-name"></script>
   <script src="diary.js?v=20260817-diary-month-gap"></script>
   <script src="ledger.js?v=20261012-tax-years-only"></script>
-  <script src="app.js?v=20260926-odometer-url"></script>
+  <script src="app.js?v=20261121-safari-pwa"></script>
 </body>
 </html>

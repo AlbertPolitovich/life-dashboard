@@ -863,6 +863,7 @@ async function apiFetch(url, init = {}) {
     if (tgInitData) headers.set("X-Telegram-Init-Data", tgInitData);
     return await fetch(url, {
       cache: "no-store",
+      credentials: "same-origin",
       ...rest,
       headers,
       signal: timeoutController.signal,
@@ -873,6 +874,122 @@ async function apiFetch(url, init = {}) {
     clearTimeout(timeoutId);
     if (externalSignal) externalSignal.removeEventListener("abort", onExternalAbort);
   }
+}
+
+function hasTelegramInitData() {
+  return Boolean(window.Telegram?.WebApp?.initData);
+}
+
+function setWebLoginVisible(on) {
+  const gate = document.getElementById("webLoginGate");
+  if (gate) gate.hidden = !on;
+  document.body.classList.toggle("web-login-open", Boolean(on));
+}
+
+function setWebLoginError(msg) {
+  const el = document.getElementById("webLoginError");
+  if (!el) return;
+  if (!msg) {
+    el.hidden = true;
+    el.textContent = "";
+    return;
+  }
+  el.hidden = false;
+  el.textContent = msg;
+}
+
+async function loginWithAccessToken(token) {
+  const key = String(token || "").trim();
+  if (!key) throw new Error("Введи ключ");
+  const res = await apiFetch(apiUrl("/auth/login"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token: key }),
+  });
+  const data = await apiReadJson(res);
+  if (!res.ok || !data?.ok) {
+    throw new Error(data?.error || "Неверный ключ");
+  }
+  return data;
+}
+
+async function fetchAuthStatus() {
+  try {
+    const res = await apiFetch(apiUrl("/auth/status"));
+    const data = await apiReadJson(res);
+    if (!res.ok) return { ok: false, auth: null };
+    return data;
+  } catch {
+    return { ok: false, auth: null };
+  }
+}
+
+function stripAccessKeyFromUrl() {
+  try {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has("k")) return;
+    url.searchParams.delete("k");
+    const q = url.searchParams.toString();
+    const next = `${url.pathname}${q ? `?${q}` : ""}${url.hash}`;
+    window.history.replaceState({}, "", next);
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * TG Mini App: initData как раньше.
+ * Safari / Домой: cookie-сессия после одноразового ключа (поле или ?k=).
+ */
+async function ensureWebOrTelegramAccess() {
+  if (hasTelegramInitData()) {
+    setWebLoginVisible(false);
+    return true;
+  }
+
+  const urlKey = new URLSearchParams(window.location.search).get("k");
+  if (urlKey) {
+    try {
+      await loginWithAccessToken(urlKey);
+      stripAccessKeyFromUrl();
+      setWebLoginVisible(false);
+      return true;
+    } catch (err) {
+      stripAccessKeyFromUrl();
+      setWebLoginError(String(err?.message || err || "Неверный ключ"));
+    }
+  }
+
+  const status = await fetchAuthStatus();
+  if (status?.auth) {
+    setWebLoginVisible(false);
+    return true;
+  }
+
+  setWebLoginVisible(true);
+  return new Promise((resolve) => {
+    const input = document.getElementById("webLoginKey");
+    const btn = document.getElementById("webLoginSubmit");
+    const submit = async () => {
+      setWebLoginError("");
+      try {
+        await loginWithAccessToken(input?.value || "");
+        if (input) input.value = "";
+        setWebLoginVisible(false);
+        resolve(true);
+      } catch (err) {
+        setWebLoginError(String(err?.message || err || "Неверный ключ"));
+      }
+    };
+    btn?.addEventListener("click", submit);
+    input?.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter") {
+        ev.preventDefault();
+        submit();
+      }
+    });
+    input?.focus?.();
+  });
 }
 
 async function apiReadJson(res) {
@@ -7185,6 +7302,8 @@ function startSilentRefresh() {
 
 async function bootstrap() {
   initTelegram();
+  const allowed = await ensureWebOrTelegramAccess();
+  if (!allowed) return;
   syncInputKeyboards(document.body);
   window.LifeInputKeyboards = { sync: syncInputKeyboards, focus: focusWithoutScroll };
   if (window.LifeFinance) {

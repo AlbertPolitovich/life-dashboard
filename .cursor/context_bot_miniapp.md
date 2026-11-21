@@ -37,10 +37,21 @@ cd api && ./run.sh          # нужен ../bot/.venv
 ```
 
 **Cache-bust (актуально по `mini-app/index.html`, проверить перед правкой UI):**  
-`styles.css?v=20261012-transport-tax` · `app.js?v=20260926-odometer-url` · `finance.js?v=20260821-export-name`  
+`styles.css?v=20261121-safari-pwa` · `app.js?v=20261121-safari-pwa` · `finance.js?v=20260821-export-name`  
 `ledger.js?v=20261012-tax-years-only` · `diary.js?v=20260817-diary-month-gap` · `charts.js?v=20260708-finance-food-unified-color`
 
 **Эталон UI финансов:** то, что на проде / в `mini-app/finance.js` (+ `charts.js`). Отдельного canvas-мокапа **нет** (был набросок дизайна, файла нет) — не искать `finance-mockup.canvas.tsx`.
+
+---
+
+## Сделано недавно (нояб. 2026, не откатывать)
+
+### Safari / PWA · вход без Telegram
+
+- Вторая дверь: `LD_ACCESS_TOKEN` → POST `/auth/login` или GET `/auth/login?k=` → cookie `ld_session` (год, HttpOnly).
+- TG-вход не трогали. Симметрия: один API/БД; без service worker кэша данных.
+- UI: экран `#webLoginGate` если нет TG и нет сессии. Manifest + `mini-app/icons/*`.
+- Cache: `app.js` / `styles.css` `?v=20261121-safari-pwa`. Деплой — когда пользователь попросит + ключ в серверный `api/.env`.
 
 ---
 
@@ -58,14 +69,15 @@ cd api && ./run.sh          # нужен ../bot/.venv
 
 ## Сделано недавно (июль 2026, не откатывать)
 
-### Приватность · только @tim710
+### Приватность · две двери, одна БД
 
-- API: middleware `TelegramGateMiddleware` — валидный Telegram `initData` + username `tim710` (или `ALLOWED_TELEGRAM_ID`).
-- Без auth → **404** на API (`/month`, `/health`, …).
-- `/mini-app/` статика **открыта** (иначе TG WebView не грузится); данные закрыты API.
-- Клиент шлёт `X-Telegram-Init-Data` + `tgWebAppData`.
-- SQL-бот: middleware только `@tim710`.
-- Env: `ALLOWED_TELEGRAM_USERNAME=tim710`, опц. `ALLOWED_TELEGRAM_ID`.
+- API: middleware `TelegramGateMiddleware` — **TG initData** (username `tim710` / `ALLOWED_TELEGRAM_ID`) **или** cookie `ld_session` после ключа `LD_ACCESS_TOKEN`.
+- Без auth → **404** на API (`/month`, `/health`, …). Эндпоинты `/auth/login|logout|status` открыты.
+- `/mini-app/` статика **открыта** (TG WebView + Safari / PWA); данные закрыты API.
+- Клиент TG: `X-Telegram-Init-Data` + `tgWebAppData` — как раньше.
+- Safari / «На экран Домой»: один раз ключ (поле или `?k=` / `/auth/login?k=`) → HttpOnly cookie на год. PWA: `manifest.webmanifest` + иконки; **без** SW-кэша API/HTML.
+- Env: `ALLOWED_TELEGRAM_USERNAME=tim710`, опц. `ALLOWED_TELEGRAM_ID`, **`LD_ACCESS_TOKEN`** (секрет только в `api/.env`, см. `api/.env.example`).
+- SQL-бот: middleware только `@tim710` (без cookie-пути — ок).
 
 ### КБЖУ · день «Сегодня» + матрица v2
 

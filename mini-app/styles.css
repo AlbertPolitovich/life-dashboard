@@ -10988,3 +10988,59 @@ body.is-meal-dragging .meal-entry {
   font-size: 12px;
   color: var(--hint);
 }
+
+/* Safari / PWA login (no Telegram) */
+.web-login {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(24px + var(--safe-top)) var(--pad-x) calc(24px + var(--safe-bottom));
+  background: var(--bg);
+}
+
+.web-login[hidden] {
+  display: none !important;
+}
+
+.web-login__card {
+  width: min(100%, 360px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.web-login__title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.web-login__hint {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--hint);
+}
+
+.web-login__label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--hint);
+}
+
+.web-login__error {
+  margin: 0;
+  font-size: 13px;
+  color: var(--red);
+}
+
+body.web-login-open .app-header,
+body.web-login-open .app-main {
+  visibility: hidden;
+}

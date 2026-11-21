@@ -119,7 +119,63 @@ ALLOWED_TELEGRAM_USERNAME = os.getenv("ALLOWED_TELEGRAM_USERNAME", "tim710").str
 ALLOWED_TELEGRAM_ID = (os.getenv("ALLOWED_TELEGRAM_ID") or "").strip()
 TELEGRAM_AUTH_HEADER = "x-telegram-init-data"
 TELEGRAM_AUTH_QUERY = "tgWebAppData"
-AUTH_COOKIE = "ld_auth"
+# Safari / PWA session cookie (HttpOnly). Value = HMAC of LD_ACCESS_TOKEN, not the raw key.
+AUTH_COOKIE = "ld_session"
+AUTH_COOKIE_MAX_AGE = 365 * 24 * 60 * 60  # 1 year
+LD_ACCESS_TOKEN = (os.getenv("LD_ACCESS_TOKEN") or "").strip()
+
+
+def _session_cookie_value() -> str:
+    """Deterministic session marker derived from LD_ACCESS_TOKEN (never store raw token in cookie)."""
+    if not LD_ACCESS_TOKEN:
+        return ""
+    return hmac.new(
+        LD_ACCESS_TOKEN.encode("utf-8"),
+        b"ld_web_session_v1",
+        hashlib.sha256,
+    ).hexdigest()
+
+
+def _cookie_auth_ok(request: Request) -> bool:
+    expected = _session_cookie_value()
+    if not expected:
+        return False
+    got = (request.cookies.get(AUTH_COOKIE) or "").strip()
+    if not got:
+        return False
+    return hmac.compare_digest(got, expected)
+
+
+def _access_token_ok(candidate: str) -> bool:
+    if not LD_ACCESS_TOKEN or not candidate:
+        return False
+    return hmac.compare_digest(candidate.strip(), LD_ACCESS_TOKEN)
+
+
+def _request_is_https(request: Request) -> bool:
+    if request.url.scheme == "https":
+        return True
+    xf = (request.headers.get("x-forwarded-proto") or "").split(",")[0].strip().lower()
+    return xf == "https"
+
+
+def _set_session_cookie(response: Response, request: Request) -> None:
+    value = _session_cookie_value()
+    if not value:
+        return
+    response.set_cookie(
+        AUTH_COOKIE,
+        value,
+        max_age=AUTH_COOKIE_MAX_AGE,
+        httponly=True,
+        secure=_request_is_https(request),
+        samesite="lax",
+        path="/",
+    )
+
+
+def _clear_session_cookie(response: Response) -> None:
+    response.delete_cookie(AUTH_COOKIE, path="/")
 
 
 def _load_bot_token() -> str:
@@ -192,9 +248,12 @@ def _extract_init_data(request: Request) -> str:
 def _requires_auth(path: str) -> bool:
     if path == "/favicon.ico":
         return False
-    # Static mini-app shell must be reachable so Telegram WebView can boot JS.
+    # Static mini-app shell must be reachable so Telegram WebView / Safari can boot JS.
     # Sensitive data remains protected at API endpoints below.
     if path.startswith("/mini-app"):
+        return False
+    # Cookie login/logout/status — open; gate still protects all data APIs.
+    if path.startswith("/auth/"):
         return False
     if path.startswith("/docs") or path.startswith("/openapi"):
         return True
@@ -202,13 +261,15 @@ def _requires_auth(path: str) -> bool:
 
 
 class TelegramGateMiddleware(BaseHTTPMiddleware):
+    """TG initData (tim710) OR long-lived ld_session cookie — same API/DB."""
+
     async def dispatch(self, request: Request, call_next):
         path = request.url.path or "/"
         if not _requires_auth(path):
             return await call_next(request)
         if request.method == "OPTIONS":
             return await call_next(request)
-        if request.cookies.get(AUTH_COOKIE) == "1":
+        if _cookie_auth_ok(request):
             return await call_next(request)
 
         init_data = _extract_init_data(request)
@@ -217,18 +278,7 @@ class TelegramGateMiddleware(BaseHTTPMiddleware):
             # Stealth mode: do not reveal existence of endpoints.
             return Response("404", status_code=404, media_type="text/plain")
 
-        response = await call_next(request)
-        # Persist auth for static assets requests within this browser session.
-        if path.startswith("/mini-app"):
-            response.set_cookie(
-                AUTH_COOKIE,
-                "1",
-                httponly=True,
-                secure=True,
-                samesite="lax",
-                path="/",
-            )
-        return response
+        return await call_next(request)
 
 
 class MiniAppNoCacheMiddleware(BaseHTTPMiddleware):
@@ -287,6 +337,70 @@ if MINI_APP_DIR.is_dir():
 @app.get("/health")
 def health():
     return {"ok": True}
+
+
+@app.get("/auth/status")
+def auth_status(request: Request):
+    """Open: whether this browser already has a valid Safari/PWA session cookie."""
+    if _cookie_auth_ok(request):
+        return {"ok": True, "auth": "cookie"}
+    init_data = _extract_init_data(request)
+    user = _parse_and_validate_init_data(init_data)
+    if _is_allowed_telegram_user(user):
+        return {"ok": True, "auth": "telegram"}
+    return {"ok": True, "auth": None, "cookie_login": bool(LD_ACCESS_TOKEN)}
+
+
+@app.post("/auth/login")
+async def auth_login_post(request: Request):
+    """Exchange LD_ACCESS_TOKEN for HttpOnly ld_session cookie (1 year)."""
+    if not LD_ACCESS_TOKEN:
+        return JSONResponse(
+            status_code=503,
+            content={"ok": False, "error": "Вход по ключу не настроен"},
+        )
+    token = ""
+    try:
+        body = await request.json()
+        if isinstance(body, dict):
+            token = str(body.get("token") or body.get("key") or "").strip()
+    except Exception:
+        token = ""
+    if not _access_token_ok(token):
+        return JSONResponse(
+            status_code=401,
+            content={"ok": False, "error": "Неверный ключ"},
+        )
+    resp = JSONResponse(content={"ok": True, "auth": "cookie"})
+    _set_session_cookie(resp, request)
+    return resp
+
+
+@app.get("/auth/login")
+def auth_login_get(request: Request, k: str = Query("", description="one-time access key")):
+    """One-shot link: /auth/login?k=… → set cookie and redirect to mini-app."""
+    if not LD_ACCESS_TOKEN:
+        return JSONResponse(
+            status_code=503,
+            content={"ok": False, "error": "Вход по ключу не настроен"},
+        )
+    if not _access_token_ok(k):
+        return JSONResponse(
+            status_code=401,
+            content={"ok": False, "error": "Неверный ключ"},
+        )
+    from fastapi.responses import RedirectResponse
+
+    resp = RedirectResponse(url="/mini-app/", status_code=303)
+    _set_session_cookie(resp, request)
+    return resp
+
+
+@app.post("/auth/logout")
+def auth_logout():
+    resp = JSONResponse(content={"ok": True})
+    _clear_session_cookie(resp)
+    return resp
 
 
 @app.get("/month")
