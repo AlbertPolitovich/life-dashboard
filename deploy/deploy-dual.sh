@@ -48,6 +48,26 @@ restart_api() {
     'chown -R lifebot:lifebot /opt/life-dashboard/api /opt/life-dashboard/mini-app 2>/dev/null || true; systemctl restart life-dashboard-api'
 }
 
+# Write api/.env on VPS: DATABASE_URL + optional LD_ACCESS_TOKEN from local api/.env
+# (rsync excludes .env; without this, cookie-login key would be wiped each deploy).
+write_api_env() {
+  local host="$1"
+  local db_url="$2"
+  local tmp
+  tmp="$(mktemp)"
+  {
+    echo "DATABASE_URL=${db_url}"
+    if [[ -f "${ROOT}/api/.env" ]]; then
+      grep -E '^LD_ACCESS_TOKEN=.+' "${ROOT}/api/.env" | head -1 || true
+    fi
+  } >"${tmp}"
+  chmod 600 "${tmp}"
+  life_dashboard_scp "${tmp}" "root@${host}:${REMOTE}/api/.env"
+  rm -f "${tmp}"
+  life_dashboard_ssh "root@${host}" \
+    "chmod 600 ${REMOTE}/api/.env; chown lifebot:lifebot ${REMOTE}/api/.env 2>/dev/null || true"
+}
+
 deploy_selectel() {
   echo "═══ Selectel ${SELECTEL_HOST} (публичный, БД) ═══"
   VPS_USER=root
@@ -55,13 +75,7 @@ deploy_selectel() {
   life_dashboard_ssh_init
   life_dashboard_ssh "root@${SELECTEL_HOST}" "mkdir -p ${REMOTE}"
   deploy_code "${SELECTEL_HOST}"
-  life_dashboard_ssh "root@${SELECTEL_HOST}" bash -s <<REMOTE
-set -euo pipefail
-cat > ${REMOTE}/api/.env <<EOF
-DATABASE_URL=${SELECTEL_DB_URL}
-EOF
-chmod 600 ${REMOTE}/api/.env
-REMOTE
+  write_api_env "${SELECTEL_HOST}" "${SELECTEL_DB_URL}"
   restart_api "${SELECTEL_HOST}"
   life_dashboard_ssh_close
   echo "✓ Selectel"
