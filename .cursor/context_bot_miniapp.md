@@ -37,8 +37,10 @@ cd api && ./run.sh          # нужен ../bot/.venv
 # открыть http://127.0.0.1:8765/mini-app/
 ```
 
+**Бренд в UI (хедер / title / login / PWA):** **tim710** (не «Life Dashboard»). Репо/GitHub URL без изменений.
+
 **Cache-bust (актуально по `mini-app/index.html`, проверить перед правкой UI):**  
-`styles.css?v=20261121-safari-phone-fix` · `app.js?v=20261121-safari-phone-fix` · `finance.js?v=20260821-export-name`  
+`styles.css?v=20261121-safari-phone-form` · `app.js?v=20261121-tim710` · `manifest.webmanifest?v=20261121-tim710` · `finance.js?v=20260821-export-name`  
 `ledger.js?v=20261012-tax-years-only` · `diary.js?v=20260817-diary-month-gap` · `charts.js?v=20260708-finance-food-unified-color`
 
 **Эталон UI финансов:** то, что на проде / в `mini-app/finance.js` (+ `charts.js`). Отдельного canvas-мокапа **нет** (был набросок дизайна, файла нет) — не искать `finance-mockup.canvas.tsx`.
@@ -46,6 +48,11 @@ cd api && ./run.sh          # нужен ../bot/.venv
 ---
 
 ## Сделано недавно (нояб. 2026, не откатывать)
+
+### Бренд UI · tim710
+
+- Хедер home, `<title>`, экран логина, `apple-mobile-web-app-title`, `manifest` name/short_name → **tim710**.
+- Cache: `app.js` / `manifest` `?v=20261121-tim710`. Имя репо / GitHub URL не трогали.
 
 ### Safari / PWA · вход без Telegram
 

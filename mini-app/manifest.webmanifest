@@ -1,7 +1,7 @@
 {
-  "name": "Life Dashboard",
-  "short_name": "LD",
-  "description": "Личный Life Dashboard",
+  "name": "tim710",
+  "short_name": "tim710",
+  "description": "Личный дашборд tim710",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

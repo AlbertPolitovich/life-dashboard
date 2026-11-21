@@ -5478,7 +5478,7 @@ function setScreen(screen, opts = {}) {
   updateFillHeaderAction();
 
   if (isHome) {
-    els.headerTitle.textContent = "Life Dashboard";
+    els.headerTitle.textContent = "tim710";
   } else if (isFill) {
     els.headerTitle.textContent = state.fillMode === "history" ? "Другой день" : "Заполнить";
   } else if (screen === "detailNutritionProduct" && state.nutritionViewProduct?.name) {
