@@ -225,9 +225,9 @@
   }
 
   const MACRO_COLORS = {
-    protein: "#40d17c",
-    carbs: "#26c9dd",
-    fat: "#ed3b00",
+    protein: "#2fa86a",
+    carbs: "#3ba8c4",
+    fat: "#d97706",
   };
 
   /** Донат Б→У→Ж; serving — граммы порции, иначе на 100 г. Легенда в app.js */

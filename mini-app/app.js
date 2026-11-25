@@ -26,10 +26,11 @@ const DETAIL_TITLE = {
 };
 
 const MACRO_COLORS = {
-  protein: "#40d17c",
-  carbs: "#26c9dd",
-  fat: "#ed3b00",
+  protein: "#2fa86a",
+  carbs: "#3ba8c4",
+  fat: "#d97706",
 };
+const KCAL_BAR_COLOR = "#3d4450";
 const MACRO_LEGEND = [
   { key: "protein", label: "Белок", color: MACRO_COLORS.protein },
   { key: "carbs", label: "Углеводы", color: MACRO_COLORS.carbs },
@@ -1108,7 +1109,7 @@ const NUTRITION_HOME_BAR_LABELS = {
 };
 
 function nutritionBarColor(key, pct) {
-  if (key === "calories") return "var(--hint)";
+  if (key === "calories") return KCAL_BAR_COLOR;
   if (key === "protein") return MACRO_COLORS.protein;
   if (key === "carbs") return MACRO_COLORS.carbs;
   if (key === "fat") return MACRO_COLORS.fat;
@@ -5290,44 +5291,45 @@ function applyTelegramSafeArea() {
   const tgChromeH = deviceTop + contentTop;
   root.style.setProperty(
     "--header-bar-h",
-    isFullscreen ? `${Math.max(72, tgChromeH)}px` : "60px"
+    isFullscreen ? `${Math.max(72, tgChromeH)}px` : "50px"
   );
 }
 
-function applyThemeFromTelegram() {
-  if (!tg?.themeParams) return;
-  const p = tg.themeParams;
+function applyBrandChrome() {
   const root = document.documentElement;
-  const map = {
-    bg_color: "--bg",
-    text_color: "--text",
-    hint_color: "--hint",
-    link_color: "--link",
-    button_color: "--btn",
-    button_text_color: "--btn-text",
-    secondary_bg_color: "--secondary",
-  };
-  for (const [key, cssVar] of Object.entries(map)) {
-    if (p[key]) root.style.setProperty(cssVar, p[key]);
-  }
+  root.style.setProperty("--bg", "#f2f4f7");
+  root.style.setProperty("--text", "#1a1a1a");
+  root.style.setProperty("--hint", "#6b7280");
+  root.style.setProperty("--link", "#3685bf");
+  root.style.setProperty("--btn", "#3685bf");
+  root.style.setProperty("--btn-text", "#ffffff");
+  root.style.setProperty("--secondary", "#e8ecf1");
+  root.style.setProperty("--chrome", "#f2f4f7");
+  root.style.setProperty("--card", "#ffffff");
+  root.style.setProperty("--border", "rgba(17, 19, 23, 0.1)");
+  root.style.setProperty("--track", "#e5e9f0");
+  root.style.setProperty("--header-bg", "#111317");
   const header = document.getElementById("appHeader");
-  if (header && p.button_color) {
-    header.style.background = p.button_color;
-  }
-  if (p.button_color && tg.setHeaderColor) {
+  if (header) header.style.background = "#111317";
+  if (tg?.setHeaderColor) {
     try {
-      tg.setHeaderColor(p.button_color);
+      tg.setHeaderColor("#111317");
     } catch {
       /* optional */
     }
   }
-  if (p.bg_color && tg.setBackgroundColor) {
+  if (tg?.setBackgroundColor) {
     try {
-      tg.setBackgroundColor(p.bg_color);
+      tg.setBackgroundColor("#f2f4f7");
     } catch {
       /* optional */
     }
   }
+}
+
+function applyThemeFromTelegram() {
+  /* Fixed tim710 light surfaces + graphite header — ignore TG theme remaps */
+  applyBrandChrome();
 }
 
 function syncTelegramBackButton() {
@@ -7308,6 +7310,7 @@ function startSilentRefresh() {
 
 async function bootstrap() {
   initTelegram();
+  applyBrandChrome();
   const allowed = await ensureWebOrTelegramAccess();
   if (!allowed) return;
   syncInputKeyboards(document.body);

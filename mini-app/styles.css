@@ -1,20 +1,23 @@
 :root {
-  --bg: var(--tg-theme-bg-color, #ffffff);
-  --text: var(--tg-theme-text-color, #1a1a1a);
-  --hint: var(--tg-theme-hint-color, #8e8e93);
-  --link: var(--tg-theme-link-color, #3685bf);
-  --btn: var(--tg-theme-button-color, #3685bf);
-  --btn-text: var(--tg-theme-button-text-color, #ffffff);
-  --secondary: var(--tg-theme-secondary-bg-color, #f8f8f8);
-  --chrome: #f8f8f8;
-  --card: #fcfcfc;
-  --border: rgba(0, 0, 0, 0.08);
+  /* Fixed light brand palette (ignore TG dark remaps for surfaces) */
+  --bg: #f2f4f7;
+  --text: #1a1a1a;
+  --hint: #6b7280;
+  --link: #3685bf;
+  --btn: #3685bf;
+  --btn-text: #ffffff;
+  --secondary: #e8ecf1;
+  --chrome: #f2f4f7;
+  --card: #ffffff;
+  --border: rgba(17, 19, 23, 0.1);
+  --track: #e5e9f0;
+  --header-bg: #111317;
   --green: #1f8a65;
-  --yellow: #e8c030;
+  --yellow: #d4a017;
   --red: #cf2d56;
-  --header-bar-h: 60px;
+  --header-bar-h: 50px;
   --header-total-h: calc(var(--header-bar-h) + var(--safe-top));
-  --cta-h: 52px;
+  --cta-h: 48px;
   --pad-x: 16px;
   --safe-top: max(
     env(safe-area-inset-top, 0px),
@@ -85,7 +88,7 @@ body.edge-back-active {
     env(safe-area-inset-top, 0px)
     var(--pad-x)
     0;
-  background: var(--link);
+  background: var(--header-bg);
   color: #fff;
   font-weight: 600;
 }
@@ -99,10 +102,10 @@ body.tg-fullscreen .app-header {
   position: sticky;
   height: var(--header-bar-h);
   padding: 0;
-  background: var(--link);
+  background: var(--header-bg);
 }
 
-body.tg-fullscreen .app-header__title {
+body.tg-fullscreen .app-header__brand {
   position: absolute;
   left: 50%;
   bottom: 10px;
@@ -111,10 +114,13 @@ body.tg-fullscreen .app-header__title {
   max-width: calc(100% - 148px);
   margin: 0;
   padding: 0;
+  pointer-events: none;
+}
+
+body.tg-fullscreen .app-header__title {
   font-size: 16px;
   line-height: 1.2;
   text-align: center;
-  pointer-events: none;
 }
 
 body.tg-fullscreen .app-header__back,
@@ -140,6 +146,30 @@ body.tg-fullscreen .app-header__action {
   display: none;
 }
 
+.app-header__brand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.app-header__crest {
+  display: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #0a0b0d;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+
+.app-header--home .app-header__crest {
+  display: block;
+}
+
 .app-header__title {
   font-size: 16px;
   white-space: nowrap;
@@ -152,9 +182,12 @@ body.tg-fullscreen .app-header__action {
   justify-items: center;
 }
 
+.app-header--home .app-header__brand {
+  justify-self: center;
+}
+
 .app-header--home .app-header__title {
   text-align: center;
-  justify-self: center;
 }
 
 .app-header__action {
@@ -11043,4 +11076,149 @@ body.is-meal-dragging .meal-entry {
 body.web-login-open .app-header,
 body.web-login-open .app-main {
   visibility: hidden;
+}
+
+/* ── Design refresh (tim710 graphite · Nov 2026) ── */
+
+.progress-zone {
+  background: var(--chrome);
+}
+
+.progress-zone__label {
+  font-size: 11px;
+  color: var(--hint);
+}
+
+.kpi-grid {
+  gap: 10px;
+}
+
+.kpi-card,
+.nutrition-zone,
+.finance-zone__card,
+.diary-zone__card,
+.diary-zone__compact-wrap,
+.ledger-zone__card {
+  background: var(--card);
+  border-color: var(--border);
+}
+
+.kpi-card__value,
+.finance-zone__balance-value,
+.ledger-zone__balance-value,
+.ledger-zone__asset-sum,
+.nutrition-bar__nums,
+.nutrition-bar__right,
+.nutrition-bar__left {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+.kpi-card__value {
+  letter-spacing: -0.02em;
+}
+
+.kpi-card__sub {
+  font-size: 10px;
+  color: var(--hint);
+}
+
+.mini-bar,
+.nutrition-bar__track {
+  background: var(--track);
+}
+
+.home-fill-btn {
+  height: var(--cta-h);
+  margin-top: 10px;
+  border-radius: 12px;
+}
+
+.nutrition-zone,
+.finance-zone,
+.diary-zone,
+.ledger-zone {
+  margin-top: 10px;
+}
+
+.nutrition-zone__label,
+.finance-zone__label,
+.diary-zone__label,
+.ledger-zone__label {
+  font-size: 10px;
+}
+
+.nutrition-bar__home-label {
+  font-size: 10px;
+  color: var(--hint);
+}
+
+.finance-zone__balance-label,
+.ledger-zone__balance-label {
+  font-size: 10px;
+  color: var(--hint);
+}
+
+.finance-zone__period-btn,
+.ledger-zone__period-btn {
+  min-width: 34px;
+  padding: 4px 8px;
+  font-size: 10px;
+}
+
+.finance-zone__period-btn.is-active,
+.ledger-zone__period-btn.is-active {
+  background: #fff;
+}
+
+.diary-zone__today-status--empty,
+.diary-zone__compact-status--empty {
+  color: var(--hint);
+  font-weight: 500;
+}
+
+.diary-zone__today-status--filled,
+.diary-zone__compact-status--filled {
+  color: var(--green);
+}
+
+.cta-btn--secondary {
+  background: color-mix(in srgb, var(--link) 12%, #ffffff);
+  color: var(--link);
+  border: 1px solid color-mix(in srgb, var(--link) 22%, transparent);
+  height: 42px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.cta-btn--secondary:active {
+  background: color-mix(in srgb, var(--link) 18%, #ffffff);
+}
+
+.diary-zone__cta-wrap .cta-btn--inline,
+.ledger-zone__cta-wrap .cta-btn--inline {
+  height: 42px;
+  border-radius: 12px;
+  font-size: 15px;
+  background: color-mix(in srgb, var(--link) 12%, #ffffff);
+  color: var(--link);
+  border: 1px solid color-mix(in srgb, var(--link) 22%, transparent);
+}
+
+.diary-zone__cta-wrap .cta-btn--inline:active,
+.ledger-zone__cta-wrap .cta-btn--inline:active {
+  background: color-mix(in srgb, var(--link) 18%, #ffffff);
+}
+
+/* Detail screens share the same cool grey canvas */
+.flow-screen--detail,
+.flow-screen--fill,
+.app-main {
+  background: transparent;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
 }

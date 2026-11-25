@@ -40,8 +40,8 @@ cd api && ./run.sh          # нужен ../bot/.venv
 **Бренд в UI (хедер / title / login / PWA):** **tim710** (не «Life Dashboard»). Репо/GitHub URL без изменений.
 
 **Cache-bust (актуально по `mini-app/index.html`, проверить перед правкой UI):**  
-`styles.css?v=20261121-safari-phone-form` · `app.js?v=20261121-tim710` · `manifest.webmanifest?v=20261121-tim710` · `finance.js?v=20260821-export-name`  
-`ledger.js?v=20261012-tax-years-only` · `diary.js?v=20260817-diary-month-gap` · `charts.js?v=20260708-finance-food-unified-color`
+`styles.css?v=20261125-design-refresh` · `app.js?v=20261125-design-refresh` · `charts.js?v=20261125-design-refresh` · `manifest.webmanifest?v=20261121-tim710` · `finance.js?v=20260821-export-name`  
+`ledger.js?v=20261012-tax-years-only` · `diary.js?v=20260817-diary-month-gap`
 
 **Эталон UI финансов:** то, что на проде / в `mini-app/finance.js` (+ `charts.js`). Отдельного canvas-мокапа **нет** (был набросок дизайна, файла нет) — не искать `finance-mockup.canvas.tsx`.
 
@@ -49,17 +49,27 @@ cd api && ./run.sh          # нужен ../bot/.venv
 
 ## Сделано недавно (нояб. 2026, не откатывать)
 
+### Design refresh · Home (косметика)
+
+- Шапка графит `#111317` + мини-герб слева от **tim710** на Home; `theme-color` / status-bar под бесшовный верх Safari/PWA.
+- Фон `#F2F4F7`, карточки `#fff`, треки прогресса `#E5E9F0`; подписи 10–11px, tabular nums.
+- На Home одна синяя «Заполнить»; «Заполнить дневник» / «Распределить» — вторичные.
+- «Не заполнен» в дневнике — нейтральный hint (не красный); макро-бары КБЖУ чуть спокойнее.
+- **Не** делали: герб на login Safari, сводку ккал в шапке КБЖУ на Home.
+- Палитра поверхностей зафиксирована (TG dark theme не перекрашивает фон/шапку).
+- Cache: `styles.css` / `app.js` / `charts.js` `?v=20261125-design-refresh`.
+
 ### Бренд UI · tim710
 
 - Хедер home, `<title>`, экран логина, `apple-mobile-web-app-title`, `manifest` name/short_name → **tim710**.
-- Cache: `app.js` / `manifest` `?v=20261121-tim710`. Имя репо / GitHub URL не трогали.
+- Имя репо / GitHub URL не трогали.
 
 ### Safari / PWA · вход без Telegram
 
 - Вторая дверь: `LD_ACCESS_TOKEN` → POST `/auth/login` или GET `/auth/login?k=` → cookie `ld_session` (год, HttpOnly).
 - TG-вход не трогали. Симметрия: один API/БД; без service worker кэша данных.
 - UI: экран `#webLoginGate` если нет TG и нет сессии. Manifest + `mini-app/icons/*`.
-- Cache: `app.js` / `styles.css` `?v=20261121-safari-phone-fix`. Скрипт `telegram.org` **только** в TG; Safari без него. `/` → редирект на `/mini-app/` (не stealth 404). Данные API по-прежнему 404 без TG/cookie.
+- Скрипт `telegram.org` **только** в TG; Safari без него. `/` → редирект на `/mini-app/` (не stealth 404). Данные API по-прежнему 404 без TG/cookie.
 
 ---
 

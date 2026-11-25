@@ -27,25 +27,28 @@ Cache-bust: смотри актуальные `?v=` в `mini-app/index.html` и 
 
 ---
 
-## Дизайн-токены (`styles.css` :root)
+## Дизайн-токены (`styles.css` :root) · refresh 2026-11-25
 
 | Токен | Значение |
 |-------|----------|
-| `--bg` | `var(--tg-theme-bg-color, #fff)` |
+| `--bg` / `--chrome` | `#F2F4F7` (светлая палитра зафиксирована) |
 | `--text` | `#1a1a1a` |
-| `--hint` | `#8e8e93` |
+| `--hint` | `#6B7280` |
 | `--link` / `--btn` | `#3685bf` |
-| `--chrome` | `#f8f8f8` — фон progress-zone |
-| `--card` | `#fcfcfc` |
-| `--border` | `rgba(0,0,0,0.08)` |
-| `--green` / `--yellow` / `--red` | `#1f8a65` / `#e8c030` / `#cf2d56` |
-| `--header-h` | 46px |
-| `--cta-h` | 52px |
+| `--card` | `#FFFFFF` |
+| `--border` | `rgba(17,19,23,0.1)` |
+| `--track` | `#E5E9F0` — треки KPI/КБЖУ |
+| `--header-bg` | `#111317` графитовая шапка |
+| `--green` / `--yellow` / `--red` | `#1f8a65` / `#d4a017` / `#cf2d56` |
+| `--header-bar-h` | `50px` (+ safe-area; TG fullscreen — динамика) |
+| `--cta-h` | `48px` (главная «Заполнить») |
 | `--pad-x` | 16px |
+
+**Шапка Home:** мини-герб + `tim710`. **CTA:** одна синяя на Home; дневник/ledger — `cta-btn--secondary`.
 
 **Прогресс KPI:** зелёный ≥50%, жёлтый ≥25%, красный <25%.
 
-**Общие паттерны:** tap ≥44px · section label 9–10px uppercase · карточки radius 12 · sticky CTA 52px radius 14 · safe-area bottom.
+**Общие паттерны:** tap ≥44px · section label 10–11px uppercase · карточки radius 12 · tabular-nums · safe-area + `theme-color #111317`.
 
 ---
 

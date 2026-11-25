@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover, interactive-widget=overlays-content" />
   <title>tim710</title>
-  <meta name="theme-color" content="#000000" />
+  <meta name="theme-color" content="#111317" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   <meta name="apple-mobile-web-app-title" content="tim710" />
@@ -28,7 +28,7 @@
     })();
   </script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <link rel="stylesheet" href="styles.css?v=20261121-safari-phone-fix" />
+  <link rel="stylesheet" href="styles.css?v=20261125-design-refresh" />
 </head>
 <body>
   <div class="web-login" id="webLoginGate" hidden>
@@ -44,7 +44,10 @@
   </div>
   <header class="app-header" id="appHeader">
     <button type="button" class="app-header__back" id="headerBack" hidden aria-label="Назад">‹</button>
-    <span class="app-header__title" id="headerTitle">tim710</span>
+    <span class="app-header__brand" id="headerBrand">
+      <img class="app-header__crest" src="icons/icon-108.png?v=20261121-eagle" alt="" width="22" height="22" decoding="async" />
+      <span class="app-header__title" id="headerTitle">tim710</span>
+    </span>
     <button type="button" class="app-header__action" id="nutritionProductsBtn" hidden>База продуктов</button>
     <button type="button" class="app-header__action" id="fillHistoryHeaderBtn" hidden>Другой день</button>
     <button type="button" class="app-header__action" id="financeExportHeaderBtn" hidden>Экспорт данных</button>
@@ -99,7 +102,7 @@
           <p class="diary-zone__today-status" id="diaryZoneTodayStatus" hidden></p>
           <div class="diary-zone__preview" id="diaryZonePreview"></div>
           <div class="diary-zone__cta-wrap">
-            <button type="button" class="cta-btn cta-btn--inline" id="diaryZoneFillBtnA">Заполнить дневник</button>
+            <button type="button" class="cta-btn cta-btn--inline cta-btn--secondary" id="diaryZoneFillBtnA">Заполнить дневник</button>
           </div>
         </div>
         <!-- Variant B: compact row (activated via ?diaryHome=b) -->
@@ -140,7 +143,7 @@
           <div class="ledger-zone__assets" id="ledgerAssetRows"></div>
           <hr class="ledger-zone__divider ledger-zone__divider--full" id="ledgerCtaDivider" hidden />
           <div class="ledger-zone__cta-wrap" id="ledgerCtaWrap" hidden>
-            <button type="button" class="cta-btn cta-btn--inline" id="ledgerAllocateBtn">Распределить</button>
+            <button type="button" class="cta-btn cta-btn--inline cta-btn--secondary" id="ledgerAllocateBtn">Распределить</button>
           </div>
         </div>
       </article>
@@ -809,10 +812,10 @@
     </div>
   </div>
 
-  <script src="charts.js?v=20260708-finance-food-unified-color"></script>
+  <script src="charts.js?v=20261125-design-refresh"></script>
   <script src="finance.js?v=20260821-export-name"></script>
   <script src="diary.js?v=20260817-diary-month-gap"></script>
   <script src="ledger.js?v=20261012-tax-years-only"></script>
-  <script src="app.js?v=20261121-tim710"></script>
+  <script src="app.js?v=20261125-design-refresh"></script>
 </body>
 </html>
