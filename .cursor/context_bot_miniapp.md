@@ -40,7 +40,7 @@ cd api && ./run.sh          # нужен ../bot/.venv
 **Бренд в UI (хедер / title / login / PWA):** **tim710** (не «Life Dashboard»). Репо/GitHub URL без изменений.
 
 **Cache-bust (актуально по `mini-app/index.html`, проверить перед правкой UI):**  
-`styles.css?v=20261125-design-refresh` · `app.js?v=20261125-design-refresh` · `charts.js?v=20261125-design-refresh` · `manifest.webmanifest?v=20261121-tim710` · `finance.js?v=20260821-export-name`  
+`styles.css?v=20261125-kbju-colors` · `app.js?v=20261125-kbju-colors` · `charts.js?v=20261125-kbju-colors` · `manifest.webmanifest?v=20261121-tim710` · `finance.js?v=20260821-export-name`  
 `ledger.js?v=20261012-tax-years-only` · `diary.js?v=20260817-diary-month-gap`
 
 **Эталон UI финансов:** то, что на проде / в `mini-app/finance.js` (+ `charts.js`). Отдельного canvas-мокапа **нет** (был набросок дизайна, файла нет) — не искать `finance-mockup.canvas.tsx`.
@@ -54,10 +54,11 @@ cd api && ./run.sh          # нужен ../bot/.venv
 - Шапка графит `#111317` + мини-герб слева от **tim710** на Home; `theme-color` / status-bar под бесшовный верх Safari/PWA.
 - Фон `#F2F4F7`, карточки `#fff`, треки прогресса `#E5E9F0`; подписи 10–11px, tabular nums.
 - На Home одна синяя «Заполнить»; «Заполнить дневник» / «Распределить» — вторичные.
-- «Не заполнен» в дневнике — нейтральный hint (не красный); макро-бары КБЖУ чуть спокойнее.
+- «Не заполнен» в дневнике — нейтральный hint (не красный).
+- **Цвета КБЖУ bars** (после откатa спокойной палитры): Белок `#40d17c`, Углев `#26c9dd`, Жиры `#ed3b00`, Ккал `var(--hint)` — как до `260769a`; графит/фон/карточки не трогали.
 - **Не** делали: герб на login Safari, сводку ккал в шапке КБЖУ на Home.
 - Палитра поверхностей зафиксирована (TG dark theme не перекрашивает фон/шапку).
-- Cache: `styles.css` / `app.js` / `charts.js` `?v=20261125-design-refresh`.
+- Cache: `styles.css` / `app.js` / `charts.js` `?v=20261125-kbju-colors`.
 
 ### Бренд UI · tim710
 

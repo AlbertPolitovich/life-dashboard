@@ -26,11 +26,10 @@ const DETAIL_TITLE = {
 };
 
 const MACRO_COLORS = {
-  protein: "#2fa86a",
-  carbs: "#3ba8c4",
-  fat: "#d97706",
+  protein: "#40d17c",
+  carbs: "#26c9dd",
+  fat: "#ed3b00",
 };
-const KCAL_BAR_COLOR = "#3d4450";
 const MACRO_LEGEND = [
   { key: "protein", label: "Белок", color: MACRO_COLORS.protein },
   { key: "carbs", label: "Углеводы", color: MACRO_COLORS.carbs },
@@ -1109,7 +1108,7 @@ const NUTRITION_HOME_BAR_LABELS = {
 };
 
 function nutritionBarColor(key, pct) {
-  if (key === "calories") return KCAL_BAR_COLOR;
+  if (key === "calories") return "var(--hint)";
   if (key === "protein") return MACRO_COLORS.protein;
   if (key === "carbs") return MACRO_COLORS.carbs;
   if (key === "fat") return MACRO_COLORS.fat;
